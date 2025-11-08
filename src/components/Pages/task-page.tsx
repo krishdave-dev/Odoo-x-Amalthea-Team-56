@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import {
   Plus,
   LayoutGrid,
@@ -15,6 +19,12 @@ import {
   MoreVertical,
   Flag,
 } from "lucide-react";
+import { StatsCards } from "@/components/MainPages/Stats/StatsCards";
+import {
+  TaskActionDialog,
+  TaskModel,
+  TaskStatus,
+} from "@/components/MainPages/Task/TaskActionDialog";
 
 // Mock data - will be replaced with API calls later
 const mockTasks = {
@@ -28,6 +38,9 @@ const mockTasks = {
       assignedTo: "Sarah Kim",
       dueDate: "Nov 12, 2025",
       projectName: "Website Redesign",
+      status: "new" as TaskStatus,
+      hoursLogged: 0,
+      expenses: [],
     },
     {
       id: 2,
@@ -37,6 +50,9 @@ const mockTasks = {
       assignedTo: "John Doe",
       dueDate: "Nov 15, 2025",
       projectName: "API Integration",
+      status: "new" as TaskStatus,
+      hoursLogged: 0,
+      expenses: [],
     },
     {
       id: 3,
@@ -46,6 +62,9 @@ const mockTasks = {
       assignedTo: "Mike Chen",
       dueDate: "Nov 10, 2025",
       projectName: "Database Migration",
+      status: "new" as TaskStatus,
+      hoursLogged: 0,
+      expenses: [],
     },
   ],
   inProgress: [
@@ -58,6 +77,9 @@ const mockTasks = {
       assignedTo: "Alice Johnson",
       dueDate: "Nov 14, 2025",
       projectName: "Mobile App Development",
+      status: "in_progress" as TaskStatus,
+      hoursLogged: 2,
+      expenses: [],
     },
     {
       id: 5,
@@ -67,6 +89,9 @@ const mockTasks = {
       assignedTo: "Bob Smith",
       dueDate: "Nov 16, 2025",
       projectName: "Database Migration",
+      status: "in_progress" as TaskStatus,
+      hoursLogged: 1,
+      expenses: [],
     },
     {
       id: 6,
@@ -76,6 +101,9 @@ const mockTasks = {
       assignedTo: "Emma Davis",
       dueDate: "Nov 18, 2025",
       projectName: "Marketing Campaign",
+      status: "in_progress" as TaskStatus,
+      hoursLogged: 1,
+      expenses: [],
     },
     {
       id: 7,
@@ -85,6 +113,9 @@ const mockTasks = {
       assignedTo: "David Lee",
       dueDate: "Nov 11, 2025",
       projectName: "Security Audit",
+      status: "in_progress" as TaskStatus,
+      hoursLogged: 0,
+      expenses: [],
     },
   ],
   completed: [
@@ -97,6 +128,9 @@ const mockTasks = {
       assignedTo: "Sarah Kim",
       dueDate: "Nov 5, 2025",
       projectName: "Website Redesign",
+      status: "completed" as TaskStatus,
+      hoursLogged: 5,
+      expenses: [],
     },
     {
       id: 9,
@@ -106,6 +140,9 @@ const mockTasks = {
       assignedTo: "John Doe",
       dueDate: "Nov 3, 2025",
       projectName: "Mobile App Development",
+      status: "completed" as TaskStatus,
+      hoursLogged: 3,
+      expenses: [],
     },
     {
       id: 10,
@@ -115,6 +152,9 @@ const mockTasks = {
       assignedTo: "Emma Davis",
       dueDate: "Nov 1, 2025",
       projectName: "Marketing Campaign",
+      status: "completed" as TaskStatus,
+      hoursLogged: 2,
+      expenses: [],
     },
   ],
 };
@@ -124,12 +164,33 @@ export function TaskPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
-  const allTasks = [
+  const [tasksState, setTasksState] = useState<TaskModel[]>([
     ...mockTasks.new,
     ...mockTasks.inProgress,
     ...mockTasks.completed,
-  ];
+  ] as TaskModel[]);
+
+  const allTasks = tasksState;
   const totalPages = Math.ceil(allTasks.length / itemsPerPage);
+
+  // Metrics calculation from mock data
+  const metrics = useMemo(() => {
+    const today = new Date();
+    const activeProjects = new Set(allTasks.map((t) => t.projectName)).size; // number of distinct project names in tasks
+    // Delayed tasks: due date parsed & overdue
+    const delayedTasks = allTasks.filter((t) => {
+      const d = Date.parse(t.dueDate);
+      return !isNaN(d) && new Date(d) < today; // overdue by due date
+    }).length;
+    // Hours logged mock: assume high=6h, medium=4h, low=2h
+    const hoursLogged = allTasks.reduce((sum, t) => {
+      if (t.priority === "high") return sum + 6;
+      if (t.priority === "medium") return sum + 4;
+      return sum + 2;
+    }, 0);
+    const revenueEarned = hoursLogged * 90; // $90/hr placeholder
+    return { activeProjects, delayedTasks, hoursLogged, revenueEarned };
+  }, [allTasks]);
 
   // computed filter counts for the Filter popover
   const filterCounts = useMemo(() => {
@@ -144,24 +205,30 @@ export function TaskPage() {
   // filter state (only used on this page)
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
-  const [deadlineFilter, setDeadlineFilter] = useState<'all' | 'next7' | 'overdue'>('all');
+  const [deadlineFilter, setDeadlineFilter] = useState<
+    "all" | "next7" | "overdue"
+  >("all");
 
   const uniqueAssignees = useMemo(() => {
     return Array.from(new Set(allTasks.map((t) => t.assignedTo)));
   }, [allTasks]);
 
   const toggleAssignee = (name: string) => {
-    setSelectedAssignees((prev) => (prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]));
+    setSelectedAssignees((prev) =>
+      prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]
+    );
   };
 
   const togglePriority = (p: string) => {
-    setSelectedPriorities((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+    setSelectedPriorities((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    );
   };
 
   const clearFilters = () => {
     setSelectedAssignees([]);
     setSelectedPriorities([]);
-    setDeadlineFilter('all');
+    setDeadlineFilter("all");
   };
 
   const parseDueDate = (d?: string) => {
@@ -171,17 +238,29 @@ export function TaskPage() {
   };
 
   const matchesFilters = (task: any) => {
-    if (selectedAssignees.length && !selectedAssignees.includes(task.assignedTo)) return false;
-    if (selectedPriorities.length && !selectedPriorities.includes(task.priority)) return false;
+    if (
+      selectedAssignees.length &&
+      !selectedAssignees.includes(task.assignedTo)
+    )
+      return false;
+    if (
+      selectedPriorities.length &&
+      !selectedPriorities.includes(task.priority)
+    )
+      return false;
 
-    if (deadlineFilter !== 'all') {
+    if (deadlineFilter !== "all") {
       const due = parseDueDate(task.dueDate);
       if (!due) return false;
       const today = new Date();
-      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      if (deadlineFilter === 'overdue') {
+      const startOfToday = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      if (deadlineFilter === "overdue") {
         if (!(due < startOfToday)) return false;
-      } else if (deadlineFilter === 'next7') {
+      } else if (deadlineFilter === "next7") {
         const in7 = new Date(startOfToday);
         in7.setDate(in7.getDate() + 7);
         if (!(due >= startOfToday && due <= in7)) return false;
@@ -191,10 +270,27 @@ export function TaskPage() {
     return true;
   };
 
-  const filteredNew = mockTasks.new.filter(matchesFilters);
-  const filteredInProgress = mockTasks.inProgress.filter(matchesFilters);
-  const filteredCompleted = mockTasks.completed.filter(matchesFilters);
-  const filteredAll = [...filteredNew, ...filteredInProgress, ...filteredCompleted];
+  const filteredNew = tasksState
+    .filter((t) => t.status === "new")
+    .filter(matchesFilters);
+  const filteredInProgress = tasksState
+    .filter((t) => t.status === "in_progress")
+    .filter(matchesFilters);
+  const filteredCompleted = tasksState
+    .filter((t) => t.status === "completed")
+    .filter(matchesFilters);
+  const filteredAll = [
+    ...filteredNew,
+    ...filteredInProgress,
+    ...filteredCompleted,
+  ];
+  const handleTaskUpdate = (updated: TaskModel) => {
+    setTasksState((prev) =>
+      prev.map((t) => (t.id === updated.id ? updated : t))
+    );
+  };
+
+  const role: "team" | "manager" | "admin" = "team"; // TODO: wire with auth later
 
   // Use ProjectCard from MainPages for task cards/list so visuals match project cards
 
@@ -252,11 +348,41 @@ export function TaskPage() {
             </PopoverTrigger>
             <PopoverContent className="w-48">
               <div className="flex flex-col text-sm">
-                <Button variant="ghost" size="sm" className="justify-start w-full px-3 py-2">Assignees</Button>
-                <Button variant="ghost" size="sm" className="justify-start w-full px-3 py-2">Deadline</Button>
-                <Button variant="ghost" size="sm" className="justify-start w-full px-3 py-2">Date of creation</Button>
-                <Button variant="ghost" size="sm" className="justify-start w-full px-3 py-2">Priority</Button>
-                <Button variant="ghost" size="sm" className="justify-start w-full px-3 py-2">Status</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start w-full px-3 py-2"
+                >
+                  Assignees
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start w-full px-3 py-2"
+                >
+                  Deadline
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start w-full px-3 py-2"
+                >
+                  Date of creation
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start w-full px-3 py-2"
+                >
+                  Priority
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start w-full px-3 py-2"
+                >
+                  Status
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -267,6 +393,9 @@ export function TaskPage() {
           </Button>
         </div>
       </div>
+
+      {/* Stats Metrics */}
+      <StatsCards data={metrics} className="mb-6" />
 
       {/* View Toggle and Pagination */}
       <div className="mb-6 flex items-center justify-between">
@@ -305,17 +434,23 @@ export function TaskPage() {
               </h2>
             </div>
             <div className="space-y-3">
-              {mockTasks.new.map((task) => (
-                <ProjectCard
-                  key={task.id}
-                  title={task.title}
-                  tags={[task.projectName, task.priority]}
-                  images={[]}
-                  deadline={task.dueDate}
-                  managerName={task.assignedTo}
-                  managerAvatar={undefined}
-                  tasksCount={1}
-                />
+              {filteredNew.map((task) => (
+                <div key={task.id} className="space-y-2">
+                  <ProjectCard
+                    title={task.title}
+                    tags={[task.projectName, task.priority]}
+                    images={[]}
+                    deadline={task.dueDate}
+                    managerName={task.assignedTo}
+                    managerAvatar={undefined}
+                    tasksCount={1}
+                  />
+                  <TaskActionDialog
+                    task={task}
+                    onUpdate={handleTaskUpdate}
+                    role={role}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -331,17 +466,23 @@ export function TaskPage() {
               </h2>
             </div>
             <div className="space-y-3">
-              {mockTasks.inProgress.map((task) => (
-                <ProjectCard
-                  key={task.id}
-                  title={task.title}
-                  tags={[task.projectName, task.priority]}
-                  images={[]}
-                  deadline={task.dueDate}
-                  managerName={task.assignedTo}
-                  managerAvatar={undefined}
-                  tasksCount={1}
-                />
+              {filteredInProgress.map((task) => (
+                <div key={task.id} className="space-y-2">
+                  <ProjectCard
+                    title={task.title}
+                    tags={[task.projectName, task.priority]}
+                    images={[]}
+                    deadline={task.dueDate}
+                    managerName={task.assignedTo}
+                    managerAvatar={undefined}
+                    tasksCount={1}
+                  />
+                  <TaskActionDialog
+                    task={task}
+                    onUpdate={handleTaskUpdate}
+                    role={role}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -357,9 +498,34 @@ export function TaskPage() {
               </h2>
             </div>
             <div className="space-y-3">
-              {mockTasks.completed.map((task) => (
+              {filteredCompleted.map((task) => (
+                <div key={task.id} className="space-y-2">
+                  <ProjectCard
+                    title={task.title}
+                    tags={[task.projectName, task.priority]}
+                    images={[]}
+                    deadline={task.dueDate}
+                    managerName={task.assignedTo}
+                    managerAvatar={undefined}
+                    tasksCount={1}
+                  />
+                  <TaskActionDialog
+                    task={task}
+                    onUpdate={handleTaskUpdate}
+                    role={role}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredAll
+            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+            .map((task) => (
+              <div key={task.id} className="space-y-2">
                 <ProjectCard
-                  key={task.id}
                   title={task.title}
                   tags={[task.projectName, task.priority]}
                   images={[]}
@@ -368,25 +534,12 @@ export function TaskPage() {
                   managerAvatar={undefined}
                   tasksCount={1}
                 />
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {allTasks
-            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-            .map((task) => (
-              <ProjectCard
-                key={task.id}
-                title={task.title}
-                tags={[task.projectName, task.priority]}
-                images={[]}
-                deadline={task.dueDate}
-                managerName={task.assignedTo}
-                managerAvatar={undefined}
-                tasksCount={1}
-              />
+                <TaskActionDialog
+                  task={task}
+                  onUpdate={handleTaskUpdate}
+                  role={role}
+                />
+              </div>
             ))}
         </div>
       )}

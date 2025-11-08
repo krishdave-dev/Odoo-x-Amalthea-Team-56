@@ -36,6 +36,7 @@ export async function GET(req: Request) {
         search: query.q,
       }
     )
+    
 
     return paginatedResponse(result)
   } catch (error) {

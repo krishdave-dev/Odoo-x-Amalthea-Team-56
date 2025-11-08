@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
 import { Button } from "@/components/ui/button";
+import { StatsCards } from "@/components/MainPages/Stats/StatsCards";
 import {
   Plus,
   LayoutGrid,
@@ -82,6 +83,26 @@ export function ProjectPage() {
   const itemsPerPage = 6;
   const totalPages = Math.ceil(mockProjects.length / itemsPerPage);
 
+  // Metrics (mock-derived). Replace with real API values later.
+  const metrics = useMemo(() => {
+    const today = new Date();
+    const activeProjects = mockProjects.filter(
+      (p) => p.status === "active"
+    ).length;
+    const delayedTasks = mockProjects.reduce((sum, p) => {
+      const due = Date.parse(p.dueDate);
+      const isOverdue = !isNaN(due) && new Date(due) < today;
+      const remaining = Math.max(0, p.totalTasks - p.tasksCompleted);
+      return sum + (isOverdue ? remaining : 0);
+    }, 0);
+    const hoursLogged = mockProjects.reduce(
+      (sum, p) => sum + p.tasksCompleted * 4,
+      0
+    ); // ~4h/task
+    const revenueEarned = hoursLogged * 100; // ~$100/hour
+    return { activeProjects, delayedTasks, hoursLogged, revenueEarned };
+  }, []);
+
   const paginatedProjects = mockProjects.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -137,6 +158,9 @@ export function ProjectPage() {
           New Project
         </Button>
       </div>
+
+      {/* Stats Metrics */}
+      <StatsCards data={metrics} className="mb-6" />
 
       {/* View Toggle and Pagination */}
       <div className="mb-6 flex items-center justify-between">
