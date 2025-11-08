@@ -1,5 +1,5 @@
-import { TaskPage } from "@/components/Pages/task-page"
+import { TaskPage } from "@/components/Pages/task-page";
 
 export default function Page() {
-  return <TaskPage />
+  return <TaskPage />;
 }

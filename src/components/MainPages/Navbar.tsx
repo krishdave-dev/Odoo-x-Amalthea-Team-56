@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { FolderKanban, CheckSquare, Settings } from "lucide-react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { FolderKanban, CheckSquare, Settings } from "lucide-react";
 
 const navItems = [
   {
@@ -21,10 +21,10 @@ const navItems = [
     href: "/settings",
     icon: Settings,
   },
-]
+];
 
 export function Navbar() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <nav className="border-b bg-background">
@@ -37,12 +37,12 @@ export function Navbar() {
               </div>
               <span className="text-xl font-bold">OneFlow</span>
             </Link>
-            
+
             <div className="flex gap-1">
               {navItems.map((item) => {
-                const isActive = pathname.startsWith(item.href)
-                const Icon = item.icon
-                
+                const isActive = pathname.startsWith(item.href);
+                const Icon = item.icon;
+
                 return (
                   <Link
                     key={item.href}
@@ -57,7 +57,7 @@ export function Navbar() {
                     <Icon className="h-4 w-4" />
                     {item.name}
                   </Link>
-                )
+                );
               })}
             </div>
           </div>
@@ -70,5 +70,5 @@ export function Navbar() {
         </div>
       </div>
     </nav>
-  )
+  );
 }

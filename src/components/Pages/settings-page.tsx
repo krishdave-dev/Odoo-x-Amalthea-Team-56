@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export function SettingsPage() {
   return (
@@ -13,5 +13,5 @@ export function SettingsPage() {
         <p className="text-muted-foreground">Settings page coming soon...</p>
       </div>
     </div>
-  )
+  );
 }

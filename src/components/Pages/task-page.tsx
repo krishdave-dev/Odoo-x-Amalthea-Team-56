@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export function TaskPage() {
   return (
@@ -13,5 +13,5 @@ export function TaskPage() {
         <p className="text-muted-foreground">Task page coming soon...</p>
       </div>
     </div>
-  )
+  );
 }

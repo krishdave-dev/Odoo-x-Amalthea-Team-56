@@ -1,14 +1,15 @@
-"use client"
+"use client";
 
-import { ProjectCard } from "@/components/MainPages/Project/ProjectCard"
-import { Plus } from "lucide-react"
+import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
+import { Plus } from "lucide-react";
 
 // Mock data - will be replaced with API calls later
 const mockProjects = [
   {
     id: 1,
     title: "Website Redesign",
-    description: "Complete overhaul of company website with new branding and improved UX",
+    description:
+      "Complete overhaul of company website with new branding and improved UX",
     status: "active" as const,
     teamMembers: 5,
     dueDate: "Dec 15, 2025",
@@ -65,7 +66,7 @@ const mockProjects = [
     tasksCompleted: 0,
     totalTasks: 10,
   },
-]
+];
 
 export function ProjectPage() {
   return (
@@ -98,5 +99,5 @@ export function ProjectPage() {
         ))}
       </div>
     </div>
-  )
+  );
 }
