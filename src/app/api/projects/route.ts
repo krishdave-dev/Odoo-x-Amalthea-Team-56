@@ -61,7 +61,7 @@ export async function GET(req: Request) {
 /**
  * POST /api/projects
  * Create a new project
- * Requires: canManageProjects permission (admin or manager)
+ * Requires: canCreateProjects permission (admin or manager)
  * Note: Only admins can assign project managers
  */
 export async function POST(req: Request) {
@@ -72,15 +72,19 @@ export async function POST(req: Request) {
     }
 
     // Check permission
-    if (!can(user.role, 'canManageProjects')) {
+    if (!can(user.role, 'canCreateProjects')) {
       return errorResponse('Insufficient permissions to create projects', 403)
     }
 
     const body = await parseBody(req, createProjectSchema)
 
-    // Only admins can assign project managers
+    // Only admins can assign project managers to other users
+    // Managers can only assign themselves
     if (body.projectManagerId && user.role !== 'admin') {
-      return errorResponse('Only admins can assign project managers', 403)
+      // If manager is trying to assign someone else, deny it
+      if (body.projectManagerId !== user.id) {
+        return errorResponse('Only admins can assign project managers to other users', 403)
+      }
     }
 
     // If manager creates project without specifying PM, they become the PM

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { userService } from '@/services/user.service'
 import {
   successResponse,
@@ -12,26 +12,24 @@ import {
   parseQuery,
   userQuerySchema,
 } from '@/lib/validation'
+import { withAuth, getOrganizationId } from '@/lib/middleware/auth'
 
 /**
  * GET /api/users
  * List all users with pagination, search, and filters
- * Query params: page, pageSize, q (search), role, isActive, organizationId
+ * Query params: page, pageSize, q (search), role, isActive
+ * 
+ * Permissions: Admin only
  */
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
+    const { user, error } = await withAuth(req, { requireRoles: ['admin'] })
+    if (error) return error
+
     const { searchParams } = new URL(req.url)
     const query = parseQuery(searchParams, userQuerySchema)
     
-    // TODO: Get organizationId from auth context
-    // For now, require it as query param
-    const organizationId = searchParams.get('organizationId')
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'organizationId is required' },
-        { status: 400 }
-      )
-    }
+    const organizationId = getOrganizationId(user!).toString()
 
     const result = await userService.getUsers(
       organizationId,
@@ -53,14 +51,25 @@ export async function GET(req: Request) {
 /**
  * POST /api/users
  * Create a new user
+ * 
+ * Permissions: Admin only
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const { user, error } = await withAuth(req, { requireRoles: ['admin'] })
+    if (error) return error
+
     const body = await parseBody(req, createUserSchema)
 
-    const user = await userService.createUser(body)
+    // Ensure user is created in same organization
+    const userToCreate = {
+      ...body,
+      organizationId: getOrganizationId(user!).toString(),
+    }
 
-    return createdResponse(user)
+    const newUser = await userService.createUser(userToCreate)
+
+    return createdResponse(newUser)
   } catch (error) {
     return handleError(error)
   }

@@ -13,7 +13,7 @@ import { idSchema } from '@/lib/validation'
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -26,7 +26,8 @@ export async function POST(
       return errorResponse('Insufficient permissions to approve expenses', 403)
     }
 
-    const expenseId = idSchema.parse(params.id)
+    const { id } = await params
+    const expenseId = idSchema.parse(id)
     
     const { searchParams } = new URL(req.url)
     const organizationId = idSchema.parse(searchParams.get('organizationId'))

@@ -115,8 +115,10 @@ export default function SignupPage() {
   const fetchOrganizations = async () => {
     try {
       const response = await fetch('/api/organizations')
+      
       if (response.ok) {
         const result = await response.json()
+        
         // Handle paginated response - data is in result.data
         if (result.success && result.data) {
           setOrganizations(result.data)

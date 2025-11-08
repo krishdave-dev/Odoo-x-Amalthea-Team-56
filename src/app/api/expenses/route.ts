@@ -4,13 +4,21 @@ import { successResponse, paginatedResponse } from '@/lib/response'
 import { handleError } from '@/lib/error'
 import { createExpenseSchema, expenseQuerySchema, idSchema } from '@/lib/validation'
 import { z } from 'zod'
+import { withAuth, getOrganizationId } from '@/lib/middleware/auth'
 
 /**
  * GET /api/expenses
  * Fetch expenses with filters and pagination
+ * 
+ * Permissions:
+ * - Admin/Manager/Finance: All expenses in org
+ * - Member: Only their own expenses
  */
 export async function GET(req: NextRequest) {
   try {
+    const { user, error } = await withAuth(req)
+    if (error) return error
+
     const { searchParams } = new URL(req.url)
     
     // Parse and validate query parameters
@@ -27,12 +35,10 @@ export async function GET(req: NextRequest) {
       maxAmount: searchParams.get('maxAmount') || undefined,
     })
 
-    // organizationId should come from authenticated session
-    // For now, requiring it as a query param
-    const organizationId = idSchema.parse(searchParams.get('organizationId'))
+    const organizationId = idSchema.parse(getOrganizationId(user!).toString())
 
     // Build filters
-    const filters = {
+    const filters: any = {
       status: query.status,
       userId: query.userId,
       projectId: query.projectId,
@@ -41,6 +47,11 @@ export async function GET(req: NextRequest) {
       endDate: query.endDate,
       minAmount: query.minAmount,
       maxAmount: query.maxAmount,
+    }
+
+    // Members can only see their own expenses
+    if (user!.role === 'member') {
+      filters.userId = user!.id
     }
 
     // Fetch expenses
@@ -63,17 +74,23 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/expenses
  * Create a new expense
+ * 
+ * Permissions: All authenticated users can create expenses
  */
 export async function POST(req: NextRequest) {
   try {
+    const { user, error } = await withAuth(req, {
+      requirePermissions: ['canCreateExpenses']
+    })
+    if (error) return error
+
     const body = await req.json()
     
     // Validate request body
     const data = createExpenseSchema.parse(body)
 
-    // userId should come from authenticated session
-    // For now, using the userId from the request body or defaulting to 1
-    const createdByUserId = data.userId || 1
+    // Use authenticated user as creator
+    const createdByUserId = user!.id
 
     // Create expense
     const result = await expenseService.createExpense(data, createdByUserId)

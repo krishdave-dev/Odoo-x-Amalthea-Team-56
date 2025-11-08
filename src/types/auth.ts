@@ -11,6 +11,7 @@ export interface SessionUser {
   role: UserRole
   organizationId: number
   organizationName?: string
+  isActive: boolean
 }
 
 export interface SessionData {

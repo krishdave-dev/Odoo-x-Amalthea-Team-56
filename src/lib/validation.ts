@@ -85,7 +85,7 @@ export const updateUserSchema = z.object({
 
 // Project schemas
 export const createProjectSchema = z.object({
-  organizationId: idSchema,
+  organizationId: idSchema.optional(), // Optional - will use authenticated user's org
   name: z.string().min(1).max(255),
   code: z.string().max(50).optional(),
   description: z.string().optional(),
