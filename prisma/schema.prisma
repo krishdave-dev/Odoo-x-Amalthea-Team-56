@@ -163,23 +163,29 @@ model Task {
 
 // Timesheets (heavy-write table, consider partitioning)
 model Timesheet {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("timesheet_id")
-  projectId   String   @db.Uuid @map("project_id")
-  taskId      String?  @db.Uuid @map("task_id")
-  userId      String   @db.Uuid @map("user_id")
-  workDate    DateTime @map("work_date") @db.Date
-  hours       Decimal  @db.Decimal(6, 2)
-  billable    Boolean  @default(true)
-  note        String?
-  cost        Decimal  @db.Decimal(14, 2)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("timesheet_id")
+  projectId       String    @db.Uuid @map("project_id")
+  taskId          String?   @db.Uuid @map("task_id")
+  userId          String    @db.Uuid @map("user_id")
+  start           DateTime  @map("start") @db.Timestamptz(6)
+  end             DateTime  @map("end") @db.Timestamptz(6)
+  durationHours   Decimal   @map("duration_hours") @db.Decimal(8, 2)
+  billable        Boolean   @default(true)
+  notes           String?
+  costAtTime      Decimal   @map("cost_at_time") @db.Decimal(14, 2)
+  status          String    @default("draft")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   task        Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
   user        User    @relation(fields: [userId], references: [id])
 
-  @@index([projectId, workDate], map: "ix_timesheets_project_date")
-  @@index([userId, workDate], map: "ix_timesheets_user_date")
+  @@index([projectId, createdAt], map: "ix_timesheets_project_date")
+  @@index([userId, createdAt], map: "ix_timesheets_user_date")
+  @@index([taskId], map: "ix_timesheets_task")
+  @@index([status], map: "ix_timesheets_status")
   @@map("timesheets")
 }
 

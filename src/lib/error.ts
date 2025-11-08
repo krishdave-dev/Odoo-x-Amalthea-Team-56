@@ -1,138 +1,203 @@
-import { Prisma } from '@prisma/client'
-import { errorResponse, conflictResponse, notFoundResponse } from './response'
 import { NextResponse } from 'next/server'
+import { ZodError } from 'zod'
 
 /**
- * Custom application errors
+ * Centralized error handling for API routes
  */
-export class AppError extends Error {
-  constructor(
-    public message: string,
-    public statusCode: number = 400,
-    public code?: string
-  ) {
-    super(message)
-    this.name = 'AppError'
-  }
-}
 
-export class ValidationError extends AppError {
-  constructor(message: string) {
-    super(message, 400, 'VALIDATION_ERROR')
-    this.name = 'ValidationError'
-  }
-}
-
-export class NotFoundError extends AppError {
-  constructor(resource: string) {
-    super(`${resource} not found`, 404, 'NOT_FOUND')
-    this.name = 'NotFoundError'
-  }
-}
-
-export class ConflictError extends AppError {
-  constructor(message: string) {
-    super(message, 409, 'CONFLICT')
-    this.name = 'ConflictError'
-  }
-}
-
-export class UnauthorizedError extends AppError {
-  constructor(message: string = 'Unauthorized') {
-    super(message, 401, 'UNAUTHORIZED')
-    this.name = 'UnauthorizedError'
-  }
-}
-
-export class ForbiddenError extends AppError {
-  constructor(message: string = 'Forbidden') {
-    super(message, 403, 'FORBIDDEN')
-    this.name = 'ForbiddenError'
+export interface ErrorResponse {
+  success: false
+  error: {
+    message: string
+    code: string
+    details?: unknown
   }
 }
 
 /**
- * Handle Prisma errors
+ * Handle errors and return appropriate HTTP response
  */
-function handlePrismaError(error: Prisma.PrismaClientKnownRequestError): NextResponse {
-  switch (error.code) {
-    case 'P2002':
-      // Unique constraint violation
-      const target = (error.meta?.target as string[]) || []
-      return conflictResponse(
-        `A record with this ${target.join(', ')} already exists`
+export function handleError(error: unknown): NextResponse<ErrorResponse> {
+  console.error('API Error:', error)
+
+  // Zod validation errors
+  if (error instanceof ZodError) {
+    return NextResponse.json<ErrorResponse>(
+      {
+        success: false,
+        error: {
+          message: 'Validation error',
+          code: 'VALIDATION_ERROR',
+          details: error.issues,
+        },
+      },
+      { status: 400 }
+    )
+  }
+
+  // Prisma known request errors
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const prismaError = error as { code: string; meta?: unknown }
+    
+    // Unique constraint violation
+    if (prismaError.code === 'P2002') {
+      return NextResponse.json<ErrorResponse>(
+        {
+          success: false,
+          error: {
+            message: 'A record with this value already exists',
+            code: 'DUPLICATE_ENTRY',
+            details: prismaError.meta,
+          },
+        },
+        { status: 409 }
       )
-    
-    case 'P2025':
-      // Record not found
-      return notFoundResponse('Resource')
-    
-    case 'P2003':
-      // Foreign key constraint violation
-      return errorResponse('Referenced record does not exist', 400)
-    
-    case 'P2014':
-      // Invalid ID
-      return errorResponse('Invalid ID provided', 400)
-    
-    case 'P2023':
-      // Inconsistent column data
-      return errorResponse('Invalid data format', 400)
-    
-    default:
-      console.error('Unhandled Prisma error:', error)
-      return errorResponse('Database error occurred', 500)
-  }
-}
+    }
 
-/**
- * Global error handler for API routes
- */
-export function handleError(error: unknown): NextResponse {
-  // Log error in development
-  if (process.env.NODE_ENV === 'development') {
-    console.error('API Error:', error)
-  }
+    // Record not found
+    if (prismaError.code === 'P2025') {
+      return NextResponse.json<ErrorResponse>(
+        {
+          success: false,
+          error: {
+            message: 'Record not found',
+            code: 'NOT_FOUND',
+          },
+        },
+        { status: 404 }
+      )
+    }
 
-  // Handle custom app errors
-  if (error instanceof AppError) {
-    return errorResponse(error.message, error.statusCode)
-  }
-
-  // Handle Prisma errors
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    return handlePrismaError(error)
-  }
-
-  // Handle Prisma validation errors
-  if (error instanceof Prisma.PrismaClientValidationError) {
-    return errorResponse('Invalid data provided', 400)
-  }
-
-  // Handle generic errors
-  if (error instanceof Error) {
-    // Don't expose internal error messages in production
-    const message = process.env.NODE_ENV === 'development' 
-      ? error.message 
-      : 'An unexpected error occurred'
-    return errorResponse(message, 500)
-  }
-
-  // Unknown error type
-  return errorResponse('An unexpected error occurred', 500)
-}
-
-/**
- * Async error wrapper for route handlers
- */
-export function withErrorHandler(
-  handler: (req: Request, context?: any) => Promise<NextResponse>
-) {
-  return async (req: Request, context?: any): Promise<NextResponse> => {
-    try {
-      return await handler(req, context)
-    } catch (error) {
-      return handleError(error)
+    // Foreign key constraint violation
+    if (prismaError.code === 'P2003') {
+      return NextResponse.json<ErrorResponse>(
+        {
+          success: false,
+          error: {
+            message: 'Related record not found',
+            code: 'FOREIGN_KEY_VIOLATION',
+            details: prismaError.meta,
+          },
+        },
+        { status: 400 }
+      )
     }
   }
+
+  // Prisma validation errors (check for message pattern)
+  if (error instanceof Error && error.message.includes('Prisma')) {
+    return NextResponse.json<ErrorResponse>(
+      {
+        success: false,
+        error: {
+          message: 'Invalid data provided',
+          code: 'VALIDATION_ERROR',
+        },
+      },
+      { status: 400 }
+    )
+  }
+
+  // Custom application errors
+  if (error instanceof Error) {
+    // Check for specific error messages
+    if (error.message.includes('not found')) {
+      return NextResponse.json<ErrorResponse>(
+        {
+          success: false,
+          error: {
+            message: error.message,
+            code: 'NOT_FOUND',
+          },
+        },
+        { status: 404 }
+      )
+    }
+
+    if (error.message.includes('not allowed') || error.message.includes('forbidden')) {
+      return NextResponse.json<ErrorResponse>(
+        {
+          success: false,
+          error: {
+            message: error.message,
+            code: 'FORBIDDEN',
+          },
+        },
+        { status: 403 }
+      )
+    }
+
+    // Generic error
+    return NextResponse.json<ErrorResponse>(
+      {
+        success: false,
+        error: {
+          message: error.message,
+          code: 'INTERNAL_ERROR',
+        },
+      },
+      { status: 500 }
+    )
+  }
+
+  // Unknown error
+  return NextResponse.json<ErrorResponse>(
+    {
+      success: false,
+      error: {
+        message: 'An unexpected error occurred',
+        code: 'UNKNOWN_ERROR',
+      },
+    },
+    { status: 500 }
+  )
+}
+
+/**
+ * Create a validation error response
+ */
+export function validationError(message: string, details?: unknown): NextResponse<ErrorResponse> {
+  return NextResponse.json<ErrorResponse>(
+    {
+      success: false,
+      error: {
+        message,
+        code: 'VALIDATION_ERROR',
+        details,
+      },
+    },
+    { status: 400 }
+  )
+}
+
+/**
+ * Create a not found error response
+ */
+export function notFoundError(message: string = 'Resource not found'): NextResponse<ErrorResponse> {
+  return NextResponse.json<ErrorResponse>(
+    {
+      success: false,
+      error: {
+        message,
+        code: 'NOT_FOUND',
+      },
+    },
+    { status: 404 }
+  )
+}
+
+/**
+ * Create a forbidden error response
+ */
+export function forbiddenError(message: string = 'Action not allowed'): NextResponse<ErrorResponse> {
+  return NextResponse.json<ErrorResponse>(
+    {
+      success: false,
+      error: {
+        message,
+        code: 'FORBIDDEN',
+      },
+    },
+    { status: 403 }
+  )
 }
