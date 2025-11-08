@@ -218,6 +218,130 @@ export const expenseQuerySchema = paginationSchema.extend({
   maxAmount: z.coerce.number().optional(),
 })
 
+// Financial Document schemas
+// Sales Order schemas
+export const salesOrderStatusEnum = z.enum(['draft', 'confirmed', 'invoiced', 'cancelled'])
+
+export const createSalesOrderSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  soNumber: z.string().min(1).max(100),
+  partnerName: z.string().min(1).max(255).optional(),
+  orderDate: z.coerce.date().optional(),
+  totalAmount: z.coerce.number().nonnegative().default(0),
+  status: salesOrderStatusEnum.default('draft'),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const updateSalesOrderSchema = z.object({
+  soNumber: z.string().min(1).max(100).optional(),
+  partnerName: z.string().min(1).max(255).optional(),
+  orderDate: z.coerce.date().optional(),
+  totalAmount: z.coerce.number().nonnegative().optional(),
+  status: salesOrderStatusEnum.optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const salesOrderQuerySchema = paginationSchema.extend({
+  status: salesOrderStatusEnum.optional(),
+  projectId: idSchema.optional(),
+  partnerName: z.string().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+})
+
+// Purchase Order schemas
+export const purchaseOrderStatusEnum = z.enum(['draft', 'confirmed', 'billed', 'cancelled'])
+
+export const createPurchaseOrderSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  poNumber: z.string().min(1).max(100),
+  vendorName: z.string().min(1).max(255).optional(),
+  orderDate: z.coerce.date().optional(),
+  totalAmount: z.coerce.number().nonnegative().default(0),
+  status: purchaseOrderStatusEnum.default('draft'),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const updatePurchaseOrderSchema = z.object({
+  poNumber: z.string().min(1).max(100).optional(),
+  vendorName: z.string().min(1).max(255).optional(),
+  orderDate: z.coerce.date().optional(),
+  totalAmount: z.coerce.number().nonnegative().optional(),
+  status: purchaseOrderStatusEnum.optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const purchaseOrderQuerySchema = paginationSchema.extend({
+  status: purchaseOrderStatusEnum.optional(),
+  projectId: idSchema.optional(),
+  vendorName: z.string().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+})
+
+// Customer Invoice schemas
+export const invoiceStatusEnum = z.enum(['draft', 'sent', 'paid', 'cancelled'])
+
+export const createInvoiceSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  soId: idSchema.optional(),
+  invoiceNumber: z.string().min(1).max(100),
+  invoiceDate: z.coerce.date().optional(),
+  amount: z.coerce.number().positive(),
+  status: invoiceStatusEnum.default('draft'),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const updateInvoiceSchema = z.object({
+  invoiceNumber: z.string().min(1).max(100).optional(),
+  invoiceDate: z.coerce.date().optional(),
+  amount: z.coerce.number().positive().optional(),
+  status: invoiceStatusEnum.optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const invoiceQuerySchema = paginationSchema.extend({
+  status: invoiceStatusEnum.optional(),
+  projectId: idSchema.optional(),
+  soId: idSchema.optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+})
+
+// Vendor Bill schemas
+export const billStatusEnum = z.enum(['draft', 'received', 'paid', 'cancelled'])
+
+export const createBillSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  poId: idSchema.optional(),
+  vendorName: z.string().min(1).max(255).optional(),
+  billDate: z.coerce.date().optional(),
+  amount: z.coerce.number().positive(),
+  status: billStatusEnum.default('draft'),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const updateBillSchema = z.object({
+  vendorName: z.string().min(1).max(255).optional(),
+  billDate: z.coerce.date().optional(),
+  amount: z.coerce.number().positive().optional(),
+  status: billStatusEnum.optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const billQuerySchema = paginationSchema.extend({
+  status: billStatusEnum.optional(),
+  projectId: idSchema.optional(),
+  poId: idSchema.optional(),
+  vendorName: z.string().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+})
+
 /**
  * Helper to parse and validate request body
  */
