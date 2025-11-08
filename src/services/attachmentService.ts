@@ -19,14 +19,14 @@ const MAX_PREVIEW_SIZE = 200 * 1024 // 200KB
 
 interface UploadFileInput {
   file: File
-  organizationId: string
+  organizationId: number
   ownerType: string
-  ownerId: string
-  uploadedBy?: string
+  ownerId: number
+  uploadedBy?: number
 }
 
 interface UploadResult {
-  id: string
+  id: number
   fileName: string
   fileSize: number
   mimeType: string
@@ -64,7 +64,7 @@ export class AttachmentService {
 
     try {
       // Step 1: Upload to Cloudinary
-      const uploadResult = await uploadToCloudinary(file, organizationId, ownerType)
+      const uploadResult = await uploadToCloudinary(file, organizationId.toString(), ownerType)
 
       cloudUrl = uploadResult.secure_url
       cloudPublicId = uploadResult.public_id
@@ -194,7 +194,7 @@ export class AttachmentService {
   /**
    * Get attachment metadata by ID
    */
-  async getAttachmentById(id: string) {
+  async getAttachmentById(id: number) {
     const attachment = await prisma.attachment.findUnique({
       where: { id },
       include: {
@@ -221,7 +221,7 @@ export class AttachmentService {
   /**
    * Get preview/fallback data
    */
-  async getPreviewData(id: string) {
+  async getPreviewData(id: number) {
     const attachment = await prisma.attachment.findUnique({
       where: { id },
       select: {
@@ -255,14 +255,14 @@ export class AttachmentService {
   /**
    * Get fallback data when Cloudinary is unavailable
    */
-  async getFallbackData(id: string) {
+  async getFallbackData(id: number) {
     return this.getPreviewData(id)
   }
 
   /**
    * Delete attachment (soft delete)
    */
-  async deleteAttachment(id: string, userId?: string) {
+  async deleteAttachment(id: number, userId?: number) {
     const attachment = await prisma.attachment.findUnique({
       where: { id },
     })
@@ -316,8 +316,8 @@ export class AttachmentService {
   /**
    * List attachments by owner
    */
-  async listAttachmentsByOwner(ownerType: string, ownerId: string, organizationId?: string) {
-    const where: { ownerType: string; ownerId: string; organizationId?: string; status?: string } =
+  async listAttachmentsByOwner(ownerType: string, ownerId: number, organizationId?: number) {
+    const where: { ownerType: string; ownerId: number; organizationId?: number; status?: string } =
       {
         ownerType,
         ownerId,
@@ -357,7 +357,7 @@ export class AttachmentService {
   /**
    * Verify attachment health (used by outbox processor)
    */
-  async verifyAttachment(id: string) {
+  async verifyAttachment(id: number) {
     const attachment = await prisma.attachment.findUnique({
       where: { id },
     })
@@ -396,7 +396,7 @@ export class AttachmentService {
   /**
    * Retry failed upload (used by outbox processor)
    */
-  async retryUpload(id: string) {
+  async retryUpload(id: number) {
     const attachment = await prisma.attachment.findUnique({
       where: { id },
     })
@@ -413,7 +413,7 @@ export class AttachmentService {
       // Retry upload to Cloudinary
       const uploadResult = await uploadToCloudinary(
         attachment.backupData,
-        attachment.organizationId,
+        attachment.organizationId.toString(),
         attachment.ownerType
       )
 

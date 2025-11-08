@@ -7,12 +7,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { attachmentService } from '@/services/attachmentService'
 import { handleError } from '@/lib/error'
 import { z } from 'zod'
+import { idSchema } from '@/lib/validation'
 
 const uploadSchema = z.object({
-  organizationId: z.string().uuid('Invalid organization ID'),
+  organizationId: idSchema,
   ownerType: z.string().min(1, 'Owner type is required').max(50),
-  ownerId: z.string().uuid('Invalid owner ID'),
-  uploadedBy: z.string().uuid('Invalid user ID').optional(),
+  ownerId: idSchema,
+  uploadedBy: idSchema.optional(),
 })
 
 export async function POST(request: NextRequest) {
