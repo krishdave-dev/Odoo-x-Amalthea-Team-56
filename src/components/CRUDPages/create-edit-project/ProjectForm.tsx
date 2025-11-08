@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,23 +25,39 @@ import {
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProjectFormProps {
   mode: "create" | "edit";
   initialData?: {
+    id?: number;
     name?: string;
+    code?: string;
     tags?: string[];
-    manager?: string;
-    deadline?: Date;
+    projectManagerId?: number;
+    teamMembers?: number[];
+    startDate?: Date;
+    endDate?: Date;
     priority?: "low" | "medium" | "high";
     image?: string;
     description?: string;
+    status?: string;
+    budget?: number;
   };
   onSave?: (data: any) => void;
   onDiscard?: () => void;
 }
 
-// Mock data for dropdowns
+interface OrgUser {
+  id: number;
+  name: string | null;
+  email: string;
+  role: string;
+}
+
+// Mock data for tags
 const tagOptions = [
   { value: "development", label: "Development" },
   { value: "design", label: "Design" },
@@ -53,25 +69,30 @@ const tagOptions = [
   { value: "database", label: "Database" },
 ];
 
-const managerOptions = [
-  { value: "john", label: "John Doe" },
-  { value: "sarah", label: "Sarah Kim" },
-  { value: "alice", label: "Alice Johnson" },
-  { value: "bob", label: "Bob Smith" },
-  { value: "emma", label: "Emma Davis" },
-];
-
 export function ProjectForm({
   mode,
   initialData,
   onSave,
   onDiscard,
 }: ProjectFormProps) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
   const [projectName, setProjectName] = useState(initialData?.name || "");
+  const [code, setCode] = useState(initialData?.code || "");
   const [tags, setTags] = useState<string[]>(initialData?.tags || []);
-  const [manager, setManager] = useState(initialData?.manager || "");
-  const [deadline, setDeadline] = useState<Date | undefined>(
-    initialData?.deadline
+  const [projectManagerId, setProjectManagerId] = useState<string>(
+    initialData?.projectManagerId?.toString() || ""
+  );
+  const [teamMembers, setTeamMembers] = useState<string[]>(
+    initialData?.teamMembers?.map(id => id.toString()) || []
+  );
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    initialData?.startDate
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    initialData?.endDate
   );
   const [priority, setPriority] = useState<"low" | "medium" | "high">(
     initialData?.priority || "medium"
@@ -80,14 +101,81 @@ export function ProjectForm({
   const [description, setDescription] = useState(
     initialData?.description || ""
   );
+  const [budget, setBudget] = useState<string>(
+    initialData?.budget?.toString() || ""
+  );
   const [imagePreview, setImagePreview] = useState<string | null>(
     initialData?.image || null
   );
+  const [status, setStatus] = useState(initialData?.status || "planned");
+
+  // Organization users
+  const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Date picker popover states
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const breadcrumbItems = [
     { label: "Projects", href: "/project" },
     { label: mode === "create" ? "Create Project" : "Edit Project" },
   ];
+
+  // Fetch organization users
+  useEffect(() => {
+    const fetchOrgUsers = async () => {
+      if (!user?.organizationId) {
+        return;
+      }
+
+      setLoadingUsers(true);
+      try {
+        const url = `/api/organizations/${user.organizationId}/users?activeOnly=true`;
+        
+        const response = await fetch(url, { credentials: "include" });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            const users = data.data.users || [];
+            setOrgUsers(users);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching organization users:", error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchOrgUsers();
+  }, [user?.organizationId]);
+
+  // Get manager options (admins and managers only)
+  const managerOptions = orgUsers
+    .filter(u => u.role === "admin" || u.role === "manager")
+    .map(u => ({
+      value: u.id.toString(),
+      label: u.name || u.email,
+    }));
+
+  // Get team member options based on user role
+  // Managers should only see members and finance roles (not admins or other managers)
+  const teamMemberOptions = orgUsers
+    .filter(u => {
+      if (user?.role === "admin") {
+        // Admins can see all users
+        return true;
+      }
+      // Managers can only see members and finance roles
+      return u.role === "member" || u.role === "finance";
+    })
+    .map(u => ({
+      value: u.id.toString(),
+      label: `${u.name || u.email} (${u.role})`,
+    }));
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,23 +194,132 @@ export function ProjectForm({
     setImage("");
   };
 
-  const handleSave = () => {
-    const data = {
+  const validateForm = (): boolean => {
+    if (!projectName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Project name is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Only admins can assign project manager
+    if (user && user.role !== "admin" && projectManagerId && projectManagerId !== user.id.toString()) {
+      toast({
+        title: "Permission Error",
+        description: "Only admins can assign project managers",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!endDate) {
+      toast({
+        title: "Validation Error",
+        description: "End date (deadline) is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (startDate && endDate && startDate > endDate) {
+      toast({
+        title: "Validation Error",
+        description: "Start date must be before end date",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setSubmitting(true);
+
+    const projectData = {
       name: projectName,
-      tags,
-      manager,
-      deadline,
-      priority,
-      image,
-      description,
+      code: code || undefined,
+      description: description || undefined,
+      projectManagerId: projectManagerId ? parseInt(projectManagerId) : undefined,
+      startDate: startDate?.toISOString(),
+      endDate: endDate?.toISOString(),
+      status,
+      budget: budget ? parseFloat(budget) : undefined,
     };
-    onSave?.(data);
-    console.log("Saving project:", data);
+
+    try {
+      const url = mode === "create" 
+        ? "/api/projects" 
+        : `/api/projects/${initialData?.id}`;
+      
+      const method = mode === "create" ? "POST" : "PUT";
+
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(projectData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: `Project ${mode === "create" ? "created" : "updated"} successfully`,
+        });
+
+        // If creating and team members selected, add them
+        if (mode === "create" && teamMembers.length > 0 && data.data?.id) {
+          await addTeamMembers(data.data.id);
+        }
+
+        onSave?.(data.data);
+        router.push("/project");
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to save project",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving project:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while saving the project",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const addTeamMembers = async (projectId: number) => {
+    try {
+      const promises = teamMembers.map(userId =>
+        fetch(`/api/projects/${projectId}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ userId: parseInt(userId) }),
+        })
+      );
+
+      await Promise.all(promises);
+    } catch (error) {
+      console.error("Error adding team members:", error);
+      // Don't fail the whole operation, just log
+    }
   };
 
   const handleDiscard = () => {
     onDiscard?.();
-    // Reset form or navigate away
+    router.push("/project");
   };
 
   return (
@@ -132,11 +329,20 @@ export function ProjectForm({
         <div className="mb-10 flex items-center justify-between gap-4">
           <Breadcrumb items={breadcrumbItems} />
           <div className="flex gap-3">
-            <Button variant="outline" onClick={handleDiscard} size="default">
+            <Button 
+              variant="outline" 
+              onClick={handleDiscard} 
+              size="default"
+              disabled={submitting}
+            >
               Discard
             </Button>
-            <Button onClick={handleSave} size="default">
-              Save
+            <Button 
+              onClick={handleSave} 
+              size="default"
+              disabled={submitting || loadingUsers}
+            >
+              {submitting ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>
@@ -159,30 +365,63 @@ export function ProjectForm({
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 className="h-11"
+                required
               />
             </div>
 
-            {/* Row 1: Tags and Project Manager */}
+            {/* Row 1: Code and Status */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Tags */}
+              {/* Project Code */}
               <div className="space-y-3">
-                <Label className="text-base">Tags</Label>
-                <MultiSelect
-                  options={tagOptions}
-                  selected={tags}
-                  onChange={setTags}
-                  placeholder="Select tags..."
+                <Label htmlFor="project-code" className="text-base">
+                  Project Code
+                </Label>
+                <Input
+                  id="project-code"
+                  placeholder="e.g., PROJ-001"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="h-11"
                 />
               </div>
 
+              {/* Status */}
+              <div className="space-y-3">
+                <Label htmlFor="status" className="text-base">
+                  Status
+                </Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger id="status" className="h-11">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planned">Planned</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="on_hold">On Hold</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Row 2: Project Manager and Team Members */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Project Manager */}
               <div className="space-y-3">
                 <Label htmlFor="project-manager" className="text-base">
-                  Project Manager <span className="text-destructive">*</span>
+                  Project Manager {user?.role === "admin" && <span className="text-destructive">*</span>}
                 </Label>
-                <Select value={manager} onValueChange={setManager}>
+                <Select 
+                  value={projectManagerId} 
+                  onValueChange={setProjectManagerId}
+                  disabled={user?.role !== "admin" || loadingUsers}
+                >
                   <SelectTrigger id="project-manager" className="h-11">
-                    <SelectValue placeholder="Select project manager" />
+                    <SelectValue placeholder={
+                      loadingUsers ? "Loading managers..." : 
+                      user?.role !== "admin" ? "Auto-assigned" :
+                      "Select project manager"
+                    } />
                   </SelectTrigger>
                   <SelectContent>
                     {managerOptions.map((option) => (
@@ -192,121 +431,131 @@ export function ProjectForm({
                     ))}
                   </SelectContent>
                 </Select>
+                {user?.role !== "admin" && (
+                  <p className="text-xs text-muted-foreground">
+                    You will be auto-assigned as project manager
+                  </p>
+                )}
+              </div>
+
+              {/* Team Members */}
+              <div className="space-y-3">
+                <Label className="text-base">
+                  Team Members
+                </Label>
+                {loadingUsers ? (
+                  <div className="h-11 border rounded-md flex items-center px-3 text-muted-foreground">
+                    Loading team members...
+                  </div>
+                ) : teamMemberOptions.length === 0 ? (
+                  <div className="h-11 border rounded-md flex items-center px-3 text-muted-foreground">
+                    No team members available
+                  </div>
+                ) : (
+                  <MultiSelect
+                    options={teamMemberOptions}
+                    selected={teamMembers}
+                    onChange={setTeamMembers}
+                    placeholder="Select team members..."
+                  />
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Assign team members to this project
+                  {!loadingUsers && ` (${teamMemberOptions.length} available)`}
+                </p>
               </div>
             </div>
 
-            {/* Row 2: Deadline and Priority */}
+            {/* Row 3: Start Date and End Date */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Deadline */}
+              {/* Start Date */}
               <div className="space-y-3">
                 <Label className="text-base">
-                  Deadline <span className="text-destructive">*</span>
+                  Start Date
                 </Label>
-                <Popover>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal h-11",
-                        !deadline && "text-muted-foreground"
+                        !startDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {deadline ? format(deadline, "PPP") : "Pick a date"}
+                      {startDate ? format(startDate, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={deadline}
-                      onSelect={setDeadline}
+                      selected={startDate}
+                      onSelect={(date) => {
+                        setStartDate(date);
+                        setStartDateOpen(false);
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
               </div>
 
-              {/* Priority */}
+              {/* End Date / Deadline */}
               <div className="space-y-3">
                 <Label className="text-base">
-                  Priority <span className="text-destructive">*</span>
+                  Deadline <span className="text-destructive">*</span>
                 </Label>
-                <RadioGroup
-                  value={priority}
-                  onValueChange={(value) =>
-                    setPriority(value as "low" | "medium" | "high")
-                  }
-                  className="flex gap-6 pt-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="low" id="low" />
-                    <Label htmlFor="low" className="font-normal cursor-pointer">
-                      Low
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="medium" id="medium" />
-                    <Label
-                      htmlFor="medium"
-                      className="font-normal cursor-pointer"
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal h-11",
+                        !endDate && "text-muted-foreground"
+                      )}
                     >
-                      Medium
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="high" id="high" />
-                    <Label
-                      htmlFor="high"
-                      className="font-normal cursor-pointer"
-                    >
-                      High
-                    </Label>
-                  </div>
-                </RadioGroup>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        setEndDate(date);
+                        setEndDateOpen(false);
+                      }}
+                      initialFocus
+                      disabled={(date) => 
+                        startDate ? date < startDate : false
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
-            {/* Image Upload */}
-            <div className="space-y-3">
-              <Label className="text-base">Project Image</Label>
-              {imagePreview ? (
-                <div className="space-y-3">
-                  <div className="relative inline-block">
-                    <img
-                      src={imagePreview}
-                      alt="Project preview"
-                      className="h-48 w-auto rounded-lg border object-cover shadow-sm"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full shadow-md"
-                      onClick={handleRemoveImage}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <Button variant="outline" asChild className="h-11">
-                    <label htmlFor="image-upload" className="cursor-pointer">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload Image
-                      <input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageChange}
-                      />
-                    </label>
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Upload a project image (optional)
-                  </span>
-                </div>
-              )}
+            {/* Row 4: Budget and Priority */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Budget */}
+              <div className="space-y-3">
+                <Label htmlFor="budget" className="text-base">
+                  Budget
+                </Label>
+                <Input
+                  id="budget"
+                  type="number"
+                  placeholder="Enter budget amount"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  className="h-11"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+
+              {/* Priority - Removed as not in schema */}
             </div>
 
             {/* Description */}
@@ -331,11 +580,20 @@ export function ProjectForm({
 
           {/* Form Actions - Bottom */}
           <div className="mt-10 pt-6 border-t flex justify-end gap-3">
-            <Button variant="outline" onClick={handleDiscard} size="lg">
+            <Button 
+              variant="outline" 
+              onClick={handleDiscard} 
+              size="lg"
+              disabled={submitting}
+            >
               Discard Changes
             </Button>
-            <Button onClick={handleSave} size="lg">
-              {mode === "create" ? "Create Project" : "Save Changes"}
+            <Button 
+              onClick={handleSave} 
+              size="lg"
+              disabled={submitting || loadingUsers}
+            >
+              {submitting ? "Saving..." : mode === "create" ? "Create Project" : "Save Changes"}
             </Button>
           </div>
         </div>

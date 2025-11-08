@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma'
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -18,7 +18,8 @@ export async function GET(
       return errorResponse('Authentication required', 401)
     }
 
-    const organizationId = parseInt(params.id)
+    const { id } = await params
+    const organizationId = parseInt(id)
     if (isNaN(organizationId)) {
       return errorResponse('Invalid organization ID', 400)
     }
@@ -87,7 +88,7 @@ export async function GET(
     })
 
     // Transform data to include project counts
-    const usersWithStats = users.map(u => ({
+    const usersWithStats = users.map((u: any) => ({
       id: u.id,
       email: u.email,
       name: u.name,
@@ -97,7 +98,7 @@ export async function GET(
       createdAt: u.createdAt,
       managedProjectsCount: u.managedProjects.length,
       assignedProjectsCount: u.projectMembers.length,
-      projects: u.projectMembers.map(pm => pm.project),
+      projects: u.projectMembers.map((pm: any) => pm.project),
     }))
 
     return successResponse({

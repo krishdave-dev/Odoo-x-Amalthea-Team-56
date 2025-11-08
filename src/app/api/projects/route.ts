@@ -61,7 +61,7 @@ export async function GET(req: Request) {
 /**
  * POST /api/projects
  * Create a new project
- * Requires: canManageProjects permission (admin or manager)
+ * Requires: canCreateProjects permission (admin or manager)
  * Note: Only admins can assign project managers
  */
 export async function POST(req: Request) {
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     }
 
     // Check permission
-    if (!can(user.role, 'canManageProjects')) {
+    if (!can(user.role, 'canCreateProjects')) {
       return errorResponse('Insufficient permissions to create projects', 403)
     }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createAuditEvent } from '@/lib/db-helpers'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/session'
 import { can } from '@/lib/permissions'
 import {
   successResponse,
@@ -12,7 +12,7 @@ import {
   conflictResponse,
   errorResponse,
 } from '@/lib/response'
-import { handleError, ConflictError, NotFoundError } from '@/lib/error'
+import { handleError } from '@/lib/error'
 import {
   createProjectMemberSchema,
   updateProjectMemberSchema,
@@ -106,7 +106,7 @@ export async function POST(
     })
 
     if (!project) {
-      throw new NotFoundError('Project')
+      return notFoundResponse('Project')
     }
 
     // Check organization access
@@ -138,7 +138,7 @@ export async function POST(
     })
 
     if (!memberUser) {
-      throw new NotFoundError('User or user does not belong to this organization')
+      return notFoundResponse('User or user does not belong to this organization')
     }
 
     // Check if member already exists
@@ -152,7 +152,7 @@ export async function POST(
     })
 
     if (existing) {
-      throw new ConflictError('User is already a member of this project')
+      return conflictResponse('User is already a member of this project')
     }
 
     // Add member

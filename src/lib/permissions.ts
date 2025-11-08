@@ -2,15 +2,39 @@ import type { UserRole } from '@/types/enums'
 
 /**
  * Role-based permission system
- * Defines what each role can do in the system
+ * 
+ * Role Permissions:
+ * - Admin: Everything (full access)
+ * - Manager (Project Manager): Create/edit projects, assign people, manage tasks, approve expenses, trigger invoices
+ * - Finance (Sales/Finance): Create/link SO/PO/Customer Invoices/Vendor Bills/Expenses in projects
+ * - Member (Team Member): View assigned tasks, update status, log hours, submit expenses
  */
 
 export interface PermissionCheck {
-  canManageProjects: boolean
-  canManageTasks: boolean
-  canManageFinance: boolean
-  canApproveExpenses: boolean
+  // Project permissions
+  canCreateProjects: boolean
+  canEditProjects: boolean
+  canDeleteProjects: boolean
   canViewAllProjects: boolean
+  canAssignProjectMembers: boolean
+  
+  // Task permissions
+  canCreateTasks: boolean
+  canManageTasks: boolean
+  canViewAllTasks: boolean
+  canUpdateOwnTasks: boolean
+  
+  // Finance permissions
+  canManageFinance: boolean // SO/PO/Invoices/Bills
+  canCreateExpenses: boolean
+  canApproveExpenses: boolean
+  canTriggerInvoices: boolean
+  
+  // Timesheet permissions
+  canLogHours: boolean
+  canViewAllTimesheets: boolean
+  
+  // User/Org permissions
   canManageUsers: boolean
   canManageOrganization: boolean
   canInviteUsers: boolean
@@ -25,12 +49,23 @@ export function getPermissions(role: UserRole | string): PermissionCheck {
 
   switch (userRole) {
     case 'admin':
+      // Admin: Everything
       return {
-        canManageProjects: true,
-        canManageTasks: true,
-        canManageFinance: true,
-        canApproveExpenses: true,
+        canCreateProjects: true,
+        canEditProjects: true,
+        canDeleteProjects: true,
         canViewAllProjects: true,
+        canAssignProjectMembers: true,
+        canCreateTasks: true,
+        canManageTasks: true,
+        canViewAllTasks: true,
+        canUpdateOwnTasks: true,
+        canManageFinance: true,
+        canCreateExpenses: true,
+        canApproveExpenses: true,
+        canTriggerInvoices: true,
+        canLogHours: true,
+        canViewAllTimesheets: true,
         canManageUsers: true,
         canManageOrganization: true,
         canInviteUsers: true,
@@ -38,38 +73,71 @@ export function getPermissions(role: UserRole | string): PermissionCheck {
       }
 
     case 'manager':
+      // Project Manager: Create/edit projects, assign people, manage tasks, approve expenses, trigger invoices
       return {
-        canManageProjects: true, // Create/edit projects
-        canManageTasks: true, // Assign people, manage tasks
-        canManageFinance: false, // Cannot manage SO/PO/Invoices/Bills directly
+        canCreateProjects: true,
+        canEditProjects: true, // Can edit their own projects
+        canDeleteProjects: false, // Only admin can delete
+        canViewAllProjects: true,
+        canAssignProjectMembers: true, // Assign people to projects
+        canCreateTasks: true,
+        canManageTasks: true, // Manage all tasks in their projects
+        canViewAllTasks: true,
+        canUpdateOwnTasks: true,
+        canManageFinance: false, // Cannot directly manage finance docs
+        canCreateExpenses: true,
         canApproveExpenses: true, // Approve expenses
-        canViewAllProjects: true, // View all projects
+        canTriggerInvoices: true, // Trigger invoices
+        canLogHours: true,
+        canViewAllTimesheets: true,
         canManageUsers: false,
         canManageOrganization: false,
-        canInviteUsers: true, // Can invite members
+        canInviteUsers: true,
         canCreateOrganization: false,
       }
 
     case 'finance':
+      // Sales/Finance: Create/link SO/PO/Customer Invoices/Vendor Bills/Expenses in projects
       return {
-        canManageProjects: false,
+        canCreateProjects: false,
+        canEditProjects: false,
+        canDeleteProjects: false,
+        canViewAllProjects: true, // View projects to link finance docs
+        canAssignProjectMembers: false,
+        canCreateTasks: false,
         canManageTasks: false,
+        canViewAllTasks: true, // View tasks for expense tracking
+        canUpdateOwnTasks: false,
         canManageFinance: true, // Create/link SO/PO/Invoices/Bills/Expenses
-        canApproveExpenses: true, // Can approve expenses
-        canViewAllProjects: true, // Need to see projects for finance
+        canCreateExpenses: true,
+        canApproveExpenses: false, // Finance creates but doesn't approve
+        canTriggerInvoices: false, // Managers trigger invoices
+        canLogHours: false,
+        canViewAllTimesheets: true, // View for billing purposes
         canManageUsers: false,
         canManageOrganization: false,
-        canInviteUsers: true, // Can invite finance people
+        canInviteUsers: false,
         canCreateOrganization: false,
       }
 
     case 'member':
+      // Team Member: View assigned tasks, update status, log hours, submit expenses
       return {
-        canManageProjects: false,
-        canManageTasks: false, // Can only update assigned tasks
-        canManageFinance: false,
-        canApproveExpenses: false,
+        canCreateProjects: false,
+        canEditProjects: false,
+        canDeleteProjects: false,
         canViewAllProjects: false, // Only see assigned projects
+        canAssignProjectMembers: false,
+        canCreateTasks: false,
+        canManageTasks: false,
+        canViewAllTasks: false, // Only see assigned tasks
+        canUpdateOwnTasks: true, // Update assigned tasks
+        canManageFinance: false,
+        canCreateExpenses: true, // Submit expenses
+        canApproveExpenses: false,
+        canTriggerInvoices: false,
+        canLogHours: true, // Log hours on tasks
+        canViewAllTimesheets: false, // Only see own timesheets
         canManageUsers: false,
         canManageOrganization: false,
         canInviteUsers: false,
@@ -79,11 +147,21 @@ export function getPermissions(role: UserRole | string): PermissionCheck {
     default:
       // Default to most restrictive permissions
       return {
-        canManageProjects: false,
-        canManageTasks: false,
-        canManageFinance: false,
-        canApproveExpenses: false,
+        canCreateProjects: false,
+        canEditProjects: false,
+        canDeleteProjects: false,
         canViewAllProjects: false,
+        canAssignProjectMembers: false,
+        canCreateTasks: false,
+        canManageTasks: false,
+        canViewAllTasks: false,
+        canUpdateOwnTasks: false,
+        canManageFinance: false,
+        canCreateExpenses: false,
+        canApproveExpenses: false,
+        canTriggerInvoices: false,
+        canLogHours: false,
+        canViewAllTimesheets: false,
         canManageUsers: false,
         canManageOrganization: false,
         canInviteUsers: false,
@@ -191,7 +269,7 @@ export function canApproveExpense(role: UserRole | string): boolean {
  * Check if user can manage finance documents (SO/PO/Invoices/Bills)
  */
 export function canManageFinanceDocuments(role: UserRole | string): boolean {
-  return role === 'admin' || role === 'manager' || role === 'finance'
+  return can(role, 'canManageFinance')
 }
 
 /**

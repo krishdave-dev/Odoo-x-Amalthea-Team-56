@@ -93,9 +93,10 @@ export async function POST(req: NextRequest) {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role as 'admin' | 'manager' | 'member',
+      role: user.role as 'admin' | 'manager' | 'member' | 'finance',
       organizationId: user.organizationId,
       organizationName: user.organization.name,
+      isActive: user.isActive,
     }
 
     session.user = sessionUser

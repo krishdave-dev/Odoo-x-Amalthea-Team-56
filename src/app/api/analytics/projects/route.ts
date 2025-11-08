@@ -4,19 +4,24 @@ import { cacheService } from '@/services/cache.service'
 import { successResponse } from '@/lib/response'
 import { handleError } from '@/lib/error'
 import { idSchema } from '@/lib/validation'
+import { withAuth, getOrganizationId } from '@/lib/middleware/auth'
 
 /**
  * GET /api/analytics/projects
  * 
  * Get project performance analytics
  * Query params:
- * - organizationId (required)
  * - forceRefresh (optional): Skip cache and recompute
+ * 
+ * Permissions: All authenticated users (filtered by org)
  */
 export async function GET(req: NextRequest) {
   try {
+    const { user, error } = await withAuth(req)
+    if (error) return error
+
     const { searchParams } = new URL(req.url)
-    const organizationId = idSchema.parse(searchParams.get('organizationId'))
+    const organizationId = getOrganizationId(user!)
     const forceRefresh = searchParams.get('forceRefresh') === 'true'
 
     // Use cache-aside pattern

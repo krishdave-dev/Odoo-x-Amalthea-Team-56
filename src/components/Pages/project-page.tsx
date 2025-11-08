@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,82 +11,91 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
-// Mock data - will be replaced with API calls later
-const mockProjects = [
-  {
-    id: 1,
-    title: "Website Redesign",
-    description:
-      "Complete overhaul of company website with new branding and improved UX",
-    status: "active" as const,
-    teamMembers: 5,
-    dueDate: "Dec 15, 2025",
-    tasksCompleted: 12,
-    totalTasks: 25,
-  },
-  {
-    id: 2,
-    title: "Mobile App Development",
-    description: "Native mobile application for iOS and Android platforms",
-    status: "active" as const,
-    teamMembers: 8,
-    dueDate: "Jan 30, 2026",
-    tasksCompleted: 8,
-    totalTasks: 40,
-  },
-  {
-    id: 3,
-    title: "Marketing Campaign",
-    description: "Q4 marketing campaign for product launch",
-    status: "planning" as const,
-    teamMembers: 4,
-    dueDate: "Nov 20, 2025",
-    tasksCompleted: 3,
-    totalTasks: 15,
-  },
-  {
-    id: 4,
-    title: "Database Migration",
-    description: "Migrate legacy database to new cloud infrastructure",
-    status: "completed" as const,
-    teamMembers: 3,
-    dueDate: "Oct 30, 2025",
-    tasksCompleted: 18,
-    totalTasks: 18,
-  },
-  {
-    id: 5,
-    title: "API Integration",
-    description: "Integrate third-party APIs for enhanced functionality",
-    status: "active" as const,
-    teamMembers: 6,
-    dueDate: "Dec 1, 2025",
-    tasksCompleted: 15,
-    totalTasks: 22,
-  },
-  {
-    id: 6,
-    title: "Security Audit",
-    description: "Comprehensive security audit and vulnerability assessment",
-    status: "planning" as const,
-    teamMembers: 2,
-    dueDate: "Nov 25, 2025",
-    tasksCompleted: 0,
-    totalTasks: 10,
-  },
-];
+interface Project {
+  id: number;
+  name: string;
+  code: string | null;
+  description: string | null;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+  budget: number | null;
+  projectManagerId: number | null;
+  projectManager: {
+    id: number;
+    name: string | null;
+    email: string;
+  } | null;
+  _count: {
+    tasks: number;
+    members: number;
+  };
+}
+
+interface PaginatedResponse {
+  data: Project[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
 
 export function ProjectPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [currentPage, setCurrentPage] = useState(1);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 6;
-  const totalPages = Math.ceil(mockProjects.length / itemsPerPage);
 
-  const paginatedProjects = mockProjects.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Fetch projects from API
+  useEffect(() => {
+    const fetchProjects = async () => {
+      if (!user?.organizationId) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const url = `/api/projects?organizationId=${user.organizationId}&page=${currentPage}&pageSize=${itemsPerPage}`;
+        const response = await fetch(url, { credentials: "include" });
+
+        if (response.ok) {
+          const result: PaginatedResponse = await response.json();
+          if (result.data) {
+            setProjects(result.data);
+            setTotalPages(result.pagination.totalPages);
+          }
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to fetch projects",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        toast({
+          title: "Error",
+          description: "An error occurred while fetching projects",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, [user?.organizationId, currentPage, toast]);
 
   const PaginationControls = () => (
     <div className="flex items-center justify-center gap-2">
@@ -93,7 +103,7 @@ export function ProjectPage() {
         variant="outline"
         size="sm"
         onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-        disabled={currentPage === 1}
+        disabled={currentPage === 1 || loading}
       >
         <ChevronLeft className="h-4 w-4" />
         Previous
@@ -105,6 +115,7 @@ export function ProjectPage() {
             variant={currentPage === page ? "default" : "outline"}
             size="sm"
             onClick={() => setCurrentPage(page)}
+            disabled={loading}
             className="w-9"
           >
             {page}
@@ -115,7 +126,7 @@ export function ProjectPage() {
         variant="outline"
         size="sm"
         onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-        disabled={currentPage === totalPages}
+        disabled={currentPage === totalPages || loading}
       >
         Next
         <ChevronRight className="h-4 w-4" />
@@ -123,18 +134,44 @@ export function ProjectPage() {
     </div>
   );
 
+  if (loading && projects.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage and track all your projects in one place
+            </p>
+          </div>
+          <Button asChild>
+            <Link href="/createproject">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Link>
+          </Button>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading projects...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <div>
+        <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           <p className="text-muted-foreground mt-2">
             Manage and track all your projects in one place
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4" />
-          New Project
+        <Button asChild>
+          <Link href="/createproject">
+            <Plus className="h-4 w-4" />
+            New Project
+          </Link>
         </Button>
       </div>
 
@@ -158,46 +195,58 @@ export function ProjectPage() {
             List
           </Button>
         </div>
-        <PaginationControls />
+        {totalPages > 1 && <PaginationControls />}
       </div>
 
       {/* Projects Grid/List */}
-      {view === "kanban" ? (
+      {projects.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
+          <p className="text-muted-foreground mb-4">No projects found</p>
+          <Button asChild>
+            <Link href="/createproject">
+              <Plus className="h-4 w-4" />
+              Create your first project
+            </Link>
+          </Button>
+        </div>
+      ) : view === "kanban" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginatedProjects.map((project) => (
+          {projects.map((project) => (
             <ProjectCard
               key={project.id}
-              title={project.title}
+              title={project.name}
               tags={[project.status]}
               images={[]}
-              deadline={project.dueDate}
-              managerName={"Abhi"}
+              deadline={project.endDate ? format(new Date(project.endDate), "MMM dd, yyyy") : undefined}
+              managerName={project.projectManager?.name || project.projectManager?.email || "Unassigned"}
               managerAvatar={undefined}
-              tasksCount={project.totalTasks}
+              tasksCount={project._count.tasks}
             />
           ))}
         </div>
       ) : (
         <div className="space-y-3">
-          {paginatedProjects.map((project) => (
+          {projects.map((project) => (
             <ProjectCard
               key={project.id}
-              title={project.title}
+              title={project.name}
               tags={[project.status]}
               images={[]}
-              deadline={project.dueDate}
-              managerName={"Abhi"}
+              deadline={project.endDate ? format(new Date(project.endDate), "MMM dd, yyyy") : undefined}
+              managerName={project.projectManager?.name || project.projectManager?.email || "Unassigned"}
               managerAvatar={undefined}
-              tasksCount={project.totalTasks}
+              tasksCount={project._count.tasks}
             />
           ))}
         </div>
       )}
 
       {/* Bottom Pagination */}
-      <div className="mt-6">
-        <PaginationControls />
-      </div>
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <PaginationControls />
+        </div>
+      )}
     </div>
   );
 }
