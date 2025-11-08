@@ -3,18 +3,16 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  extensions = [uuidOssp(map: "uuid-ossp")]
 }
 
 // Organizations / Tenants
 model Organization {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("organization_id")
+  id              Int      @id @default(autoincrement()) @map("organization_id")
   name            String
   currency        String   @default("INR") @db.Char(3)
   timezone        String   @default("Asia/Kolkata")
@@ -30,14 +28,15 @@ model Organization {
   expenses        Expense[]
   attachments     Attachment[]
   events          Event[]
+  notifications   Notification[]
 
   @@map("organizations")
 }
 
 // Users (auth + profile)
 model User {
-  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("user_id")
-  organizationId  String    @db.Uuid @map("organization_id")
+  id              Int       @id @default(autoincrement()) @map("user_id")
+  organizationId  Int       @map("organization_id")
   email           String
   name            String?
   passwordHash    String?   @map("password_hash")
@@ -57,6 +56,7 @@ model User {
   expenses        Expense[]
   uploadedAttachments Attachment[]
   taskComments    TaskComment[]
+  notifications   Notification[]
 
   @@unique([organizationId, email], map: "ux_users_org_email")
   @@map("users")
@@ -64,12 +64,12 @@ model User {
 
 // Projects
 model Project {
-  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("project_id")
-  organizationId      String    @db.Uuid @map("organization_id")
+  id                  Int       @id @default(autoincrement()) @map("project_id")
+  organizationId      Int       @map("organization_id")
   name                String
   code                String?
   description         String?
-  projectManagerId    String?   @db.Uuid @map("project_manager_id")
+  projectManagerId    Int?      @map("project_manager_id")
   startDate           DateTime? @map("start_date") @db.Date
   endDate             DateTime? @map("end_date") @db.Date
   status              String    @default("planned")
@@ -104,9 +104,9 @@ model Project {
 
 // Project Members (many-to-many)
 model ProjectMember {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId       String   @db.Uuid @map("project_id")
-  userId          String   @db.Uuid @map("user_id")
+  id              Int      @id @default(autoincrement())
+  projectId       Int      @map("project_id")
+  userId          Int      @map("user_id")
   roleInProject   String?  @map("role_in_project")
   assignedAt      DateTime @default(now()) @map("assigned_at") @db.Timestamptz(6)
 
@@ -119,8 +119,8 @@ model ProjectMember {
 
 // Task Lists / Milestones
 model TaskList {
-  id          String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("list_id")
-  projectId   String @db.Uuid @map("project_id")
+  id          Int    @id @default(autoincrement()) @map("list_id")
+  projectId   Int    @map("project_id")
   title       String
   ordinal     Int    @default(0)
 
@@ -132,12 +132,12 @@ model TaskList {
 
 // Tasks
 model Task {
-  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("task_id")
-  projectId       String    @db.Uuid @map("project_id")
-  listId          String?   @db.Uuid @map("list_id")
+  id              Int       @id @default(autoincrement()) @map("task_id")
+  projectId       Int       @map("project_id")
+  listId          Int?      @map("list_id")
   title           String
   description     String?
-  assigneeId      String?   @db.Uuid @map("assignee_id")
+  assigneeId      Int?      @map("assignee_id")
   priority        Int       @default(2) @db.SmallInt
   status          String    @default("new")
   estimateHours   Decimal?  @map("estimate_hours") @db.Decimal(8, 2)
@@ -163,10 +163,10 @@ model Task {
 
 // Timesheets (heavy-write table, consider partitioning)
 model Timesheet {
-  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("timesheet_id")
-  projectId       String    @db.Uuid @map("project_id")
-  taskId          String?   @db.Uuid @map("task_id")
-  userId          String    @db.Uuid @map("user_id")
+  id              Int       @id @default(autoincrement()) @map("timesheet_id")
+  projectId       Int       @map("project_id")
+  taskId          Int?      @map("task_id")
+  userId          Int       @map("user_id")
   start           DateTime  @map("start") @db.Timestamptz(6)
   end             DateTime  @map("end") @db.Timestamptz(6)
   durationHours   Decimal   @map("duration_hours") @db.Decimal(8, 2)
@@ -191,16 +191,18 @@ model Timesheet {
 
 // Sales Orders
 model SalesOrder {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("so_id")
-  organizationId  String   @db.Uuid @map("organization_id")
-  projectId       String?  @db.Uuid @map("project_id")
-  soNumber        String   @map("so_number")
-  partnerName     String?  @map("partner_name")
-  orderDate       DateTime @default(dbgenerated("current_date")) @map("order_date") @db.Date
-  totalAmount     Decimal  @default(0) @map("total_amount") @db.Decimal(14, 2)
-  status          String   @default("draft")
-  metadata        Json?    @db.JsonB
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id              Int       @id @default(autoincrement()) @map("so_id")
+  organizationId  Int       @map("organization_id")
+  projectId       Int?      @map("project_id")
+  soNumber        String    @map("so_number")
+  partnerName     String?   @map("partner_name")
+  orderDate       DateTime  @default(dbgenerated("current_date")) @map("order_date") @db.Date
+  totalAmount     Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
+  status          String    @default("draft") // ['draft', 'confirmed', 'invoiced', 'cancelled']
+  metadata        Json?     @db.JsonB
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   project         Project?     @relation(fields: [projectId], references: [id])
@@ -208,21 +210,25 @@ model SalesOrder {
   customerInvoices CustomerInvoice[]
 
   @@unique([organizationId, soNumber], map: "ux_so_org_number")
+  @@index([organizationId, status], map: "ix_so_org_status")
+  @@index([projectId], map: "ix_so_project")
   @@map("sales_orders")
 }
 
 // Purchase Orders
 model PurchaseOrder {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("po_id")
-  organizationId  String   @db.Uuid @map("organization_id")
-  projectId       String?  @db.Uuid @map("project_id")
-  poNumber        String   @map("po_number")
-  vendorName      String?  @map("vendor_name")
-  orderDate       DateTime @default(dbgenerated("current_date")) @map("order_date") @db.Date
-  totalAmount     Decimal  @default(0) @map("total_amount") @db.Decimal(14, 2)
-  status          String   @default("draft")
-  metadata        Json?    @db.JsonB
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id              Int       @id @default(autoincrement()) @map("po_id")
+  organizationId  Int       @map("organization_id")
+  projectId       Int?      @map("project_id")
+  poNumber        String    @map("po_number")
+  vendorName      String?   @map("vendor_name")
+  orderDate       DateTime  @default(dbgenerated("current_date")) @map("order_date") @db.Date
+  totalAmount     Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
+  status          String    @default("draft") // ['draft', 'confirmed', 'billed', 'cancelled']
+  metadata        Json?     @db.JsonB
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   project         Project?     @relation(fields: [projectId], references: [id])
@@ -230,95 +236,137 @@ model PurchaseOrder {
   vendorBills     VendorBill[]
 
   @@unique([organizationId, poNumber], map: "ux_po_org_number")
+  @@index([organizationId, status], map: "ix_po_org_status")
+  @@index([projectId], map: "ix_po_project")
   @@map("purchase_orders")
 }
 
 // Customer Invoices
 model CustomerInvoice {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("invoice_id")
-  organizationId  String   @db.Uuid @map("organization_id")
-  projectId       String?  @db.Uuid @map("project_id")
-  soId            String?  @db.Uuid @map("so_id")
-  invoiceNumber   String   @map("invoice_number")
-  invoiceDate     DateTime @default(dbgenerated("current_date")) @map("invoice_date") @db.Date
-  amount          Decimal  @db.Decimal(14, 2)
-  status          String   @default("draft")
-  metadata        Json?    @db.JsonB
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id              Int       @id @default(autoincrement()) @map("invoice_id")
+  organizationId  Int       @map("organization_id")
+  projectId       Int?      @map("project_id")
+  soId            Int?      @map("so_id")
+  invoiceNumber   String    @map("invoice_number")
+  invoiceDate     DateTime  @default(dbgenerated("current_date")) @map("invoice_date") @db.Date
+  amount          Decimal   @db.Decimal(14, 2)
+  status          String    @default("draft") // ['draft', 'sent', 'paid', 'cancelled']
+  metadata        Json?     @db.JsonB
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   project         Project?     @relation(fields: [projectId], references: [id])
   salesOrder      SalesOrder?  @relation(fields: [soId], references: [id], onDelete: SetNull)
 
   @@unique([organizationId, invoiceNumber], map: "ux_invoice_org_number")
+  @@index([organizationId, status], map: "ix_invoice_org_status")
+  @@index([soId], map: "ix_invoice_so")
   @@map("customer_invoices")
 }
 
 // Vendor Bills
 model VendorBill {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("bill_id")
-  organizationId  String   @db.Uuid @map("organization_id")
-  projectId       String?  @db.Uuid @map("project_id")
-  poId            String?  @db.Uuid @map("po_id")
-  vendorName      String?  @map("vendor_name")
-  billDate        DateTime @default(dbgenerated("current_date")) @map("bill_date") @db.Date
-  amount          Decimal  @db.Decimal(14, 2)
-  status          String   @default("draft")
-  metadata        Json?    @db.JsonB
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id              Int       @id @default(autoincrement()) @map("bill_id")
+  organizationId  Int       @map("organization_id")
+  projectId       Int?      @map("project_id")
+  poId            Int?      @map("po_id")
+  vendorName      String?   @map("vendor_name")
+  billDate        DateTime  @default(dbgenerated("current_date")) @map("bill_date") @db.Date
+  amount          Decimal   @db.Decimal(14, 2)
+  status          String    @default("draft") // ['draft', 'received', 'paid', 'cancelled']
+  metadata        Json?     @db.JsonB
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  project         Project?      @relation(fields: [projectId], references: [id])
-  purchaseOrder   PurchaseOrder? @relation(fields: [poId], references: [id])
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project         Project?       @relation(fields: [projectId], references: [id])
+  purchaseOrder   PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: SetNull)
 
+  @@index([organizationId, status], map: "ix_bill_org_status")
+  @@index([poId], map: "ix_bill_po")
   @@map("vendor_bills")
 }
 
 // Expenses (employee)
 model Expense {
-  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("expense_id")
-  organizationId  String    @db.Uuid @map("organization_id")
-  projectId       String?   @db.Uuid @map("project_id")
-  userId          String?   @db.Uuid @map("user_id")
+  id              Int       @id @default(autoincrement()) @map("expense_id")
+  organizationId  Int       @map("organization_id")
+  projectId       Int?      @map("project_id")
+  userId          Int?      @map("user_id")
   amount          Decimal   @db.Decimal(12, 2)
   billable        Boolean   @default(false)
-  status          String    @default("submitted")
+  status          String    @default("draft") // 'draft', 'submitted', 'approved', 'rejected', 'paid'
   receiptUrl      String?   @map("receipt_url")
   note            String?
+  rejectionReason String?   @map("rejection_reason")
+  approvedBy      Int?      @map("approved_by")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  submittedAt     DateTime? @map("submitted_at") @db.Timestamptz(6)
   approvedAt      DateTime? @map("approved_at") @db.Timestamptz(6)
+  paidAt          DateTime? @map("paid_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   project         Project?     @relation(fields: [projectId], references: [id])
   user            User?        @relation(fields: [userId], references: [id])
 
   @@index([projectId, status], map: "ix_expenses_proj_status")
+  @@index([organizationId, status], map: "ix_expenses_org_status")
+  @@index([userId, status], map: "ix_expenses_user_status")
   @@map("expenses")
 }
 
 // Attachments
+// Production-Grade Attachment Storage with Outbox Pattern
 model Attachment {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("attachment_id")
-  organizationId  String   @db.Uuid @map("organization_id")
+  id              Int      @id @default(autoincrement()) @map("attachment_id")
+  organizationId  Int      @map("organization_id")
   ownerType       String   @map("owner_type")
-  ownerId         String   @db.Uuid @map("owner_id")
+  ownerId         Int      @map("owner_id")
   fileUrl         String   @map("file_url")
   fileName        String?  @map("file_name")
-  uploadedBy      String?  @db.Uuid @map("uploaded_by")
+  uploadedBy      Int?     @map("uploaded_by")
   uploadedAt      DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  status          String   @default("active") // 'active', 'pending_upload', 'deleted', 'failed'
+  lastVerifiedAt  DateTime? @map("last_verified_at") @db.Timestamptz(6)
 
+  // Relations
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   uploader        User?        @relation(fields: [uploadedBy], references: [id])
 
   @@index([ownerType, ownerId], map: "ix_attachments_owner")
+  @@index([status], map: "ix_attachments_status")
+  @@index([organizationId], map: "ix_attachments_org")
   @@map("attachments")
+}
+
+// Outbox Pattern for Eventual Consistency
+model OutboxEvent {
+  id          Int       @id @default(autoincrement()) @map("event_id")
+  eventType   String    @map("event_type") // 'UPLOAD_SUCCESS', 'DELETE_FILE', 'VERIFY_UPLOAD', 'REPAIR_UPLOAD'
+  entityType  String    @map("entity_type") // 'Attachment'
+  entityId    Int       @map("entity_id")
+  payload     Json      // Contains Cloudinary data, retry count, etc.
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  processed   Boolean   @default(false)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
+  error       String?   // Error message if processing failed
+  retryCount  Int       @default(0) @map("retry_count")
+
+  @@index([processed, createdAt], map: "ix_outbox_unprocessed")
+  @@index([eventType], map: "ix_outbox_event_type")
+  @@map("outbox_events")
 }
 
 // Task Comments
 model TaskComment {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("comment_id")
-  taskId      String   @db.Uuid @map("task_id")
-  userId      String   @db.Uuid @map("user_id")
+  id          Int      @id @default(autoincrement()) @map("comment_id")
+  taskId      Int      @map("task_id")
+  userId      Int      @map("user_id")
   content     String
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
@@ -330,10 +378,10 @@ model TaskComment {
 
 // Events / Audit Log (append-only)
 model Event {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("event_id")
-  organizationId  String   @db.Uuid @map("organization_id")
+  id              Int      @id @default(autoincrement()) @map("event_id")
+  organizationId  Int      @map("organization_id")
   entityType      String   @map("entity_type")
-  entityId        String?  @db.Uuid @map("entity_id")
+  entityId        Int?     @map("entity_id")
   eventType       String   @map("event_type")
   payload         Json?    @db.JsonB
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -341,4 +389,40 @@ model Event {
   organization    Organization @relation(fields: [organizationId], references: [id])
 
   @@map("events")
+}
+
+// Analytics Cache for Performance Optimization
+model AnalyticsCache {
+  id              Int       @id @default(autoincrement()) @map("cache_id")
+  organizationId  Int       @map("organization_id")
+  cacheType       String    @map("cache_type") // 'project_summary', 'finance_summary', 'timesheet_summary', etc.
+  data            Json      @db.JsonB // Cached analytics result
+  computedAt      DateTime  @default(now()) @map("computed_at") @db.Timestamptz(6)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(6)
+  computeDurationMs Int?    @map("compute_duration_ms") // Track query performance
+  
+  @@unique([organizationId, cacheType], map: "ux_analytics_org_type")
+  @@index([organizationId, cacheType, expiresAt], map: "ix_analytics_lookup")
+  @@index([expiresAt], map: "ix_analytics_expires")
+  @@map("analytics_cache")
+}
+
+// Notifications for In-App and Email Alerts
+model Notification {
+  id              Int       @id @default(autoincrement()) @map("notification_id")
+  organizationId  Int       @map("organization_id")
+  userId          Int?      @map("user_id")
+  type            String    // e.g., "TASK_ASSIGNED", "INVOICE_GENERATED", "EXPENSE_APPROVED"
+  title           String
+  message         String
+  data            Json?     @db.JsonB // Additional context (entityId, links, etc.)
+  isRead          Boolean   @default(false) @map("is_read")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId, isRead], map: "ix_notifications_user_status")
+  @@index([userId, createdAt], map: "ix_notifications_user_date")
+  @@map("notifications")
 }

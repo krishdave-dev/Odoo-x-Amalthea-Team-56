@@ -9,9 +9,8 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email)
 }
 
-export function validateUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-  return uuidRegex.test(uuid)
+export function validatePositiveInteger(value: number): boolean {
+  return Number.isInteger(value) && value > 0
 }
 
 export function validateCurrency(currency: string): boolean {
@@ -41,7 +40,7 @@ export function validateDateRange(startDate: Date, endDate: Date): boolean {
  */
 
 // Common schemas
-export const uuidSchema = z.string().uuid()
+export const idSchema = z.coerce.number().int().positive()
 export const emailSchema = z.string().email()
 export const positiveNumberSchema = z.number().nonnegative()
 export const positiveDecimalSchema = z.coerce.number().nonnegative()
@@ -67,7 +66,7 @@ export const updateOrganizationSchema = z.object({
 
 // User schemas
 export const createUserSchema = z.object({
-  organizationId: uuidSchema,
+  organizationId: idSchema,
   email: emailSchema,
   name: z.string().min(1).max(255).optional(),
   passwordHash: z.string().optional(),
@@ -86,11 +85,11 @@ export const updateUserSchema = z.object({
 
 // Project schemas
 export const createProjectSchema = z.object({
-  organizationId: uuidSchema,
+  organizationId: idSchema,
   name: z.string().min(1).max(255),
   code: z.string().max(50).optional(),
   description: z.string().optional(),
-  projectManagerId: uuidSchema.optional(),
+  projectManagerId: idSchema.optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   budget: positiveDecimalSchema.optional(),
@@ -101,7 +100,7 @@ export const updateProjectSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   code: z.string().max(50).optional(),
   description: z.string().optional(),
-  projectManagerId: uuidSchema.nullable().optional(),
+  projectManagerId: idSchema.nullable().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   budget: positiveDecimalSchema.optional(),
@@ -112,7 +111,7 @@ export const updateProjectSchema = z.object({
 
 // Project Member schemas
 export const createProjectMemberSchema = z.object({
-  userId: uuidSchema,
+  userId: idSchema,
   roleInProject: z.string().optional(),
 })
 
@@ -122,7 +121,7 @@ export const updateProjectMemberSchema = z.object({
 
 // Task List schemas
 export const createTaskListSchema = z.object({
-  projectId: uuidSchema,
+  projectId: idSchema,
   title: z.string().min(1).max(255),
   ordinal: z.number().int().default(0),
 })
@@ -137,11 +136,11 @@ export const taskStatusEnum = z.enum(['new', 'in_progress', 'in_review', 'comple
 export const taskPrioritySchema = z.coerce.number().int().min(1).max(4)
 
 export const createTaskSchema = z.object({
-  projectId: uuidSchema,
-  listId: uuidSchema.optional(),
+  projectId: idSchema,
+  listId: idSchema.optional(),
   title: z.string().min(1).max(255),
   description: z.string().optional(),
-  assigneeId: uuidSchema.optional(),
+  assigneeId: idSchema.optional(),
   priority: taskPrioritySchema.default(2),
   status: taskStatusEnum.default('new'),
   estimateHours: positiveDecimalSchema.optional(),
@@ -150,10 +149,10 @@ export const createTaskSchema = z.object({
 })
 
 export const updateTaskSchema = z.object({
-  listId: uuidSchema.optional(),
+  listId: idSchema.optional(),
   title: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
-  assigneeId: uuidSchema.nullable().optional(),
+  assigneeId: idSchema.nullable().optional(),
   priority: taskPrioritySchema.optional(),
   status: taskStatusEnum.optional(),
   estimateHours: positiveDecimalSchema.optional(),
@@ -166,7 +165,7 @@ export const updateTaskSchema = z.object({
 export const projectQuerySchema = paginationSchema.extend({
   q: z.string().optional(),
   status: z.string().optional(),
-  managerId: uuidSchema.optional(),
+  managerId: idSchema.optional(),
   includeProjects: z.coerce.boolean().optional(),
 })
 
@@ -178,10 +177,169 @@ export const userQuerySchema = paginationSchema.extend({
 
 export const taskQuerySchema = paginationSchema.extend({
   q: z.string().optional(),
-  projectId: uuidSchema.optional(),
-  assigneeId: uuidSchema.optional(),
+  projectId: idSchema.optional(),
+  assigneeId: idSchema.optional(),
   status: taskStatusEnum.optional(),
   priority: taskPrioritySchema.optional(),
+})
+
+// Expense schemas
+export const expenseStatusEnum = z.enum(['draft', 'submitted', 'approved', 'rejected', 'paid'])
+
+export const createExpenseSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  userId: idSchema.optional(),
+  amount: z.coerce.number().positive(),
+  billable: z.boolean().default(false),
+  note: z.string().max(1000).optional(),
+  receiptUrl: z.string().url().optional(),
+})
+
+export const updateExpenseSchema = z.object({
+  amount: z.coerce.number().positive().optional(),
+  billable: z.boolean().optional(),
+  note: z.string().max(1000).optional(),
+  receiptUrl: z.string().url().optional(),
+})
+
+export const expenseWorkflowSchema = z.object({
+  reason: z.string().max(500).optional(),
+})
+
+export const expenseQuerySchema = paginationSchema.extend({
+  status: expenseStatusEnum.optional(),
+  userId: idSchema.optional(),
+  projectId: idSchema.optional(),
+  billable: z.coerce.boolean().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+  minAmount: z.coerce.number().optional(),
+  maxAmount: z.coerce.number().optional(),
+})
+
+// Financial Document schemas
+// Sales Order schemas
+export const salesOrderStatusEnum = z.enum(['draft', 'confirmed', 'invoiced', 'cancelled'])
+
+export const createSalesOrderSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  soNumber: z.string().min(1).max(100),
+  partnerName: z.string().min(1).max(255).optional(),
+  orderDate: z.coerce.date().optional(),
+  totalAmount: z.coerce.number().nonnegative().default(0),
+  status: salesOrderStatusEnum.default('draft'),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const updateSalesOrderSchema = z.object({
+  soNumber: z.string().min(1).max(100).optional(),
+  partnerName: z.string().min(1).max(255).optional(),
+  orderDate: z.coerce.date().optional(),
+  totalAmount: z.coerce.number().nonnegative().optional(),
+  status: salesOrderStatusEnum.optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const salesOrderQuerySchema = paginationSchema.extend({
+  status: salesOrderStatusEnum.optional(),
+  projectId: idSchema.optional(),
+  partnerName: z.string().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+})
+
+// Purchase Order schemas
+export const purchaseOrderStatusEnum = z.enum(['draft', 'confirmed', 'billed', 'cancelled'])
+
+export const createPurchaseOrderSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  poNumber: z.string().min(1).max(100),
+  vendorName: z.string().min(1).max(255).optional(),
+  orderDate: z.coerce.date().optional(),
+  totalAmount: z.coerce.number().nonnegative().default(0),
+  status: purchaseOrderStatusEnum.default('draft'),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const updatePurchaseOrderSchema = z.object({
+  poNumber: z.string().min(1).max(100).optional(),
+  vendorName: z.string().min(1).max(255).optional(),
+  orderDate: z.coerce.date().optional(),
+  totalAmount: z.coerce.number().nonnegative().optional(),
+  status: purchaseOrderStatusEnum.optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const purchaseOrderQuerySchema = paginationSchema.extend({
+  status: purchaseOrderStatusEnum.optional(),
+  projectId: idSchema.optional(),
+  vendorName: z.string().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+})
+
+// Customer Invoice schemas
+export const invoiceStatusEnum = z.enum(['draft', 'sent', 'paid', 'cancelled'])
+
+export const createInvoiceSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  soId: idSchema.optional(),
+  invoiceNumber: z.string().min(1).max(100),
+  invoiceDate: z.coerce.date().optional(),
+  amount: z.coerce.number().positive(),
+  status: invoiceStatusEnum.default('draft'),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const updateInvoiceSchema = z.object({
+  invoiceNumber: z.string().min(1).max(100).optional(),
+  invoiceDate: z.coerce.date().optional(),
+  amount: z.coerce.number().positive().optional(),
+  status: invoiceStatusEnum.optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const invoiceQuerySchema = paginationSchema.extend({
+  status: invoiceStatusEnum.optional(),
+  projectId: idSchema.optional(),
+  soId: idSchema.optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+})
+
+// Vendor Bill schemas
+export const billStatusEnum = z.enum(['draft', 'received', 'paid', 'cancelled'])
+
+export const createBillSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  poId: idSchema.optional(),
+  vendorName: z.string().min(1).max(255).optional(),
+  billDate: z.coerce.date().optional(),
+  amount: z.coerce.number().positive(),
+  status: billStatusEnum.default('draft'),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const updateBillSchema = z.object({
+  vendorName: z.string().min(1).max(255).optional(),
+  billDate: z.coerce.date().optional(),
+  amount: z.coerce.number().positive().optional(),
+  status: billStatusEnum.optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+
+export const billQuerySchema = paginationSchema.extend({
+  status: billStatusEnum.optional(),
+  projectId: idSchema.optional(),
+  poId: idSchema.optional(),
+  vendorName: z.string().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
 })
 
 /**

@@ -14,7 +14,7 @@ import {
   createProjectMemberSchema,
   updateProjectMemberSchema,
   parseBody,
-  uuidSchema,
+  idSchema,
 } from '@/lib/validation'
 
 /**
@@ -27,7 +27,7 @@ export async function GET(
 ) {
   try {
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    idSchema.parse(projectId)
 
     const members = await prisma.projectMember.findMany({
       where: { projectId },
@@ -62,7 +62,7 @@ export async function POST(
 ) {
   try {
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    idSchema.parse(projectId)
 
     const body = await parseBody(req, createProjectMemberSchema)
 
