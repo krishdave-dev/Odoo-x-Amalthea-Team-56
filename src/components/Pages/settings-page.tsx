@@ -42,7 +42,7 @@ export function SettingsPage() {
 
       {/* Action row */}
       <div className="flex items-center justify-between mb-4">
-        <button className="bg-violet-600 text-white px-4 py-2 rounded-md font-semibold">New</button>
+        <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-semibold">New</button>
         <input
           aria-label="Search"
           placeholder="Search......"
