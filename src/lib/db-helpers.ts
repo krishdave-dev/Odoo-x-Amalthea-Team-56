@@ -7,7 +7,7 @@ import type { Prisma } from '@prisma/client'
  */
 export async function updateWithOptimisticLocking<T extends { version: number }>(
   model: any,
-  id: string,
+  id: string | number,
   currentVersion: number,
   data: any
 ): Promise<boolean> {

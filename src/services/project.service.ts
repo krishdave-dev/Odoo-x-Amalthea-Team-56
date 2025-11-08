@@ -46,12 +46,13 @@ export class ProjectService {
   ): Promise<PaginatedResponse<Project>> {
     const skip = (page - 1) * pageSize
     const take = pageSize
+    const orgId = parseInt(organizationId, 10)
 
     const where: Prisma.ProjectWhereInput = {
-      organizationId,
+      organizationId: orgId,
       deletedAt: null,
       ...(filters?.status && { status: filters.status }),
-      ...(filters?.projectManagerId && { projectManagerId: filters.projectManagerId }),
+      ...(filters?.projectManagerId && { projectManagerId: parseInt(filters.projectManagerId, 10) }),
       ...(filters?.search && {
         OR: [
           { name: { contains: filters.search, mode: 'insensitive' } },
@@ -101,10 +102,13 @@ export class ProjectService {
    * Get a single project by ID
    */
   async getProjectById(projectId: string, organizationId: string): Promise<Project | null> {
+    const projId = parseInt(projectId, 10)
+    const orgId = parseInt(organizationId, 10)
+    
     return prisma.project.findFirst({
       where: {
-        id: projectId,
-        organizationId,
+        id: projId,
+        organizationId: orgId,
         deletedAt: null,
       },
       include: {
@@ -135,15 +139,18 @@ export class ProjectService {
    * Create a new project
    */
   async createProject(input: CreateProjectInput): Promise<Project> {
+    const orgId = parseInt(input.organizationId, 10)
+    const managerId = input.projectManagerId ? parseInt(input.projectManagerId, 10) : null
+    
     const project = await prisma.$transaction(async (tx) => {
       // Create the project
       const newProject = await tx.project.create({
         data: {
-          organizationId: input.organizationId,
+          organizationId: orgId,
           name: input.name,
           code: input.code,
           description: input.description,
-          projectManagerId: input.projectManagerId,
+          projectManagerId: managerId,
           startDate: input.startDate,
           endDate: input.endDate,
           budget: input.budget,
@@ -153,7 +160,7 @@ export class ProjectService {
 
       // Create audit event
       await createAuditEvent(
-        input.organizationId,
+        orgId,
         'project',
         newProject.id,
         'project.created',
@@ -176,14 +183,19 @@ export class ProjectService {
     input: UpdateProjectInput
   ): Promise<{ success: boolean; project?: Project; error?: string }> {
     try {
+      const projId = parseInt(projectId, 10)
+      const orgId = parseInt(organizationId, 10)
+      const updatedInput = {
+        ...input,
+        ...(input.projectManagerId && { projectManagerId: parseInt(input.projectManagerId, 10) }),
+        updatedAt: new Date(),
+      }
+      
       const success = await updateWithOptimisticLocking(
         prisma.project,
-        projectId,
+        projId,
         version,
-        {
-          ...input,
-          updatedAt: new Date(),
-        }
+        updatedInput
       )
 
       if (!success) {
@@ -197,11 +209,11 @@ export class ProjectService {
       
       if (project) {
         await createAuditEvent(
-          organizationId,
+          orgId,
           'project',
-          projectId,
+          projId,
           'project.updated',
-          { projectId, changes: input }
+          { projectId: projId, changes: input }
         )
       }
 
@@ -219,18 +231,21 @@ export class ProjectService {
    */
   async deleteProject(projectId: string, organizationId: string): Promise<boolean> {
     try {
+      const projId = parseInt(projectId, 10)
+      const orgId = parseInt(organizationId, 10)
+      
       await prisma.$transaction(async (tx) => {
         await tx.project.update({
-          where: { id: projectId, organizationId },
+          where: { id: projId, organizationId: orgId },
           data: { deletedAt: new Date() },
         })
 
         await createAuditEvent(
-          organizationId,
+          orgId,
           'project',
-          projectId,
+          projId,
           'project.deleted',
-          { projectId }
+          { projectId: projId }
         )
       })
 
@@ -250,10 +265,13 @@ export class ProjectService {
     roleInProject?: string
   ): Promise<boolean> {
     try {
+      const projId = parseInt(projectId, 10)
+      const usrId = parseInt(userId, 10)
+      
       await prisma.projectMember.create({
         data: {
-          projectId,
-          userId,
+          projectId: projId,
+          userId: usrId,
           roleInProject,
         },
       })
@@ -269,10 +287,13 @@ export class ProjectService {
    */
   async removeProjectMember(projectId: string, userId: string): Promise<boolean> {
     try {
+      const projId = parseInt(projectId, 10)
+      const usrId = parseInt(userId, 10)
+      
       await prisma.projectMember.deleteMany({
         where: {
-          projectId,
-          userId,
+          projectId: projId,
+          userId: usrId,
         },
       })
       return true
@@ -286,12 +307,14 @@ export class ProjectService {
    * Get project statistics
    */
   async getProjectStats(projectId: string) {
+    const projId = parseInt(projectId, 10)
+    
     const [taskStats, timesheetStats, financialStats] = await Promise.all([
       // Task statistics
       prisma.task.groupBy({
         by: ['status'],
         where: {
-          projectId,
+          projectId: projId,
           deletedAt: null,
         },
         _count: true,
@@ -299,7 +322,7 @@ export class ProjectService {
       
       // Timesheet statistics
       prisma.timesheet.aggregate({
-        where: { projectId },
+        where: { projectId: projId },
         _sum: {
           hours: true,
           cost: true,
@@ -308,7 +331,7 @@ export class ProjectService {
       
       // Financial statistics
       prisma.project.findUnique({
-        where: { id: projectId },
+        where: { id: projId },
         select: {
           budget: true,
           cachedRevenue: true,
