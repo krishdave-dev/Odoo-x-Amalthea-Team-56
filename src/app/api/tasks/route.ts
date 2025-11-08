@@ -7,8 +7,6 @@ import {
 } from '@/lib/response'
 import { handleError } from '@/lib/error'
 import {
-  createTaskSchema,
-  parseBody,
   parseQuery,
   taskQuerySchema,
 } from '@/lib/validation'
@@ -79,22 +77,24 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { user, error } = await withAuth(req, { 
-      requirePermissions: ['canCreateTasks'] 
-    })
-    if (error) return error
+    // Check authentication and permissions
+    const { user, error } = await withAuth(req, {
+      requirePermissions: ["canCreateTasks"],
+    });
+    if (error) return error;
 
-    const body = await parseBody(req, createTaskSchema)
+    // Parse request body
+    const body = await req.json();
 
     // Verify project exists and user has access
-    const projectError = await checkProjectAccess(user!, body.projectId, prisma)
-    if (projectError) return projectError
+    const projectError = await checkProjectAccess(user!, body.projectId, prisma);
+    if (projectError) return projectError;
 
-    const task = await taskService.createTask(body)
+    // Create task in database
+    const task = await taskService.createTask(body);
 
-    return createdResponse(task)
-  } catch (error) {
-    return handleError(error)
+    return createdResponse(task);
+  } catch (err) {
+    return handleError(err);
   }
 }
-

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
@@ -314,9 +315,11 @@ export function TaskPage() {
             </PopoverContent>
           </Popover>
 
-          <Button>
-            <Plus className="h-4 w-4" />
-            New Task
+          <Button asChild>
+            <Link href="/createtask">
+              <Plus className="h-4 w-4" />
+              New Task
+            </Link>
           </Button>
         </div>
       </div>
