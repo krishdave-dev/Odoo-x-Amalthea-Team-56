@@ -15,7 +15,6 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Popover,
   PopoverTrigger,
@@ -23,6 +22,9 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 import {
   Table,
@@ -38,35 +40,163 @@ interface TaskFormProps {
   initialData?: any;
 }
 
-const tagOptions = [
-  { value: "bug", label: "Bug" },
-  { value: "feature", label: "Feature" },
-  { value: "urgent", label: "Urgent" },
-];
+interface Project {
+  id: number;
+  name: string;
+  code?: string;
+  endDate?: string;
+}
+
+interface User {
+  id: number;
+  name: string | null;
+  email: string;
+  role: string;
+}
 
 export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
   const [title, setTitle] = useState(initialData?.title || "");
-  const [assignee, setAssignee] = useState(initialData?.assignee || "");
-  const [project, setProject] = useState(initialData?.project || "");
-  const [tags, setTags] = useState<string[]>(initialData?.tags || []);
-  const [deadline, setDeadline] = useState<Date | undefined>(
-    initialData?.deadline ? new Date(initialData.deadline) : undefined
+  const [assigneeId, setAssigneeId] = useState<string>(
+    initialData?.assigneeId?.toString() || ""
   );
-  const [image, setImage] = useState<string | null>(initialData?.image || null);
+  const [projectId, setProjectId] = useState<string>(
+    initialData?.projectId?.toString() || ""
+  );
+  const [deadline, setDeadline] = useState<Date | undefined>(
+    initialData?.dueDate ? new Date(initialData.dueDate) : undefined
+  );
+  const [priority, setPriority] = useState<string>(
+    initialData?.priority?.toString() || "2"
+  );
+  const [image, setImage] = useState<string | null>(
+    initialData?.metadata?.image || null
+  );
   const [descEditing, setDescEditing] = useState(false);
   const [description, setDescription] = useState(
     initialData?.description || ""
   );
+  const [status, setStatus] = useState<string>(
+    initialData?.status || "new"
+  );
+
+  // Data from API
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [projectMembers, setProjectMembers] = useState<User[]>([]); // Filtered by selected project
+  const [selectedProjectEndDate, setSelectedProjectEndDate] = useState<Date | undefined>();
+  const [loadingData, setLoadingData] = useState(true);
 
   // Timesheets state (kept for UI only)
   const [timesheets, setTimesheets] = useState<
     Array<{ employee: string; time: string }>
   >(
-    initialData?.timesheets || [
-      { employee: "Abhi", time: "2h 30m" },
-      { employee: "Krish", time: "1h 10m" },
-    ]
+    initialData?.metadata?.timesheets || []
   );
+
+  const [submitting, setSubmitting] = useState(false);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
+
+  // Fetch projects and users on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.organizationId) return;
+
+      try {
+        setLoadingData(true);
+
+        // Fetch projects - managers see their projects, admins see all
+        const projectsRes = await fetch(
+          `/api/projects?organizationId=${user.organizationId}&pageSize=100`,
+          { credentials: "include" }
+        );
+
+        if (projectsRes.ok) {
+          const projectsData = await projectsRes.json();
+          setProjects(projectsData.data || []);
+        }
+
+        // Fetch organization users for assignee selection
+        const usersRes = await fetch(
+          `/api/organizations/${user.organizationId}/users?activeOnly=true`,
+          { credentials: "include" }
+        );
+
+        if (usersRes.ok) {
+          const usersData = await usersRes.json();
+          setUsers(usersData.data?.users || []);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load projects and users",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, [user?.organizationId, toast]);
+
+  // Fetch project members when project is selected
+  useEffect(() => {
+    const fetchProjectMembers = async () => {
+      if (!projectId || !user?.organizationId) {
+        setProjectMembers([]);
+        setSelectedProjectEndDate(undefined);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}?organizationId=${user.organizationId}`,
+          { credentials: "include" }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          const project = data.data;
+          
+          // Store project end date for deadline validation
+          if (project?.endDate) {
+            setSelectedProjectEndDate(new Date(project.endDate));
+          } else {
+            setSelectedProjectEndDate(undefined);
+          }
+          
+          // Get project members from the members array
+          if (project?.members && Array.isArray(project.members)) {
+            const memberUsers = project.members.map((m: any) => m.user);
+            setProjectMembers(memberUsers);
+          } else {
+            setProjectMembers([]);
+          }
+
+          // Reset assignee if they're not in the project
+          if (assigneeId) {
+            const isAssigneeInProject = project?.members?.some(
+              (m: any) => m.user.id.toString() === assigneeId
+            );
+            if (!isAssigneeInProject) {
+              setAssigneeId("");
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching project members:", error);
+        setProjectMembers([]);
+        setSelectedProjectEndDate(undefined);
+      }
+    };
+
+    fetchProjectMembers();
+  }, [projectId, user?.organizationId]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -84,105 +214,115 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
     setTimesheets((prev) => [...prev, { employee: "", time: "0h 00m" }]);
   };
 
-  const totalWorkingHours = "03:40"; // placeholder
-  const lastChangedBy = "Composed Loris";
-  const lastChangedOn = new Date().toLocaleString();
+  const totalWorkingHours = timesheets.reduce((acc, t) => {
+    const match = t.time.match(/(\d+)h\s*(\d+)m/);
+    if (match) {
+      const hours = parseInt(match[1]) || 0;
+      const mins = parseInt(match[2]) || 0;
+      return acc + hours + mins / 60;
+    }
+    return acc;
+  }, 0);
 
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const validateForm = (): boolean => {
+    if (!title.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a task title",
+        variant: "destructive",
+      });
+      return false;
+    }
 
-  // NOTE: Replace these maps with API-driven lists in production.
-  const projectIdMap: Record<string, number> = { odoo: 1, amalthea: 2 };
-  const assigneeIdMap: Record<string, number> = { abhi: 1, krish: 2, dave: 3 };
+    if (!projectId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a project",
+        variant: "destructive",
+      });
+      return false;
+    }
 
-  // If you want to fetch real projects/people, you can use useEffect to call /api/projects and /api/users
-  // For the moment we keep the temporary maps as you had.
+    return true;
+  };
 
   const handleSubmit = async () => {
+    if (!validateForm()) return;
+
     try {
       setSubmitting(true);
-      setSubmitError(null);
-      setSubmitSuccess(null);
 
-      // Basic validation
-      if (!title.trim()) {
-        throw new Error("Please enter a task title");
-      }
-
-      const projectId = project ? projectIdMap[project] : undefined;
-      if (!projectId) {
-        throw new Error("Please select a project");
-      }
-
-      const assigneeId = assignee ? assigneeIdMap[assignee] : undefined;
-
-      // Priority heuristic: default medium (2); if tag includes urgent -> high (3)
-      const priority = tags.includes("urgent") ? 3 : 2;
-
-      // Build server payload to match createTaskSchema
+      // Build server payload to match createTaskSchema/updateTaskSchema
       const payload: any = {
-        projectId, // number
         title: title.trim(),
         description: description?.trim() || undefined,
-        assigneeId, // number | undefined
-        priority, // number
-        status: "new",
-        dueDate: deadline ? deadline.toISOString() : undefined,
-        // metadata should be pure JSON
+        assigneeId: assigneeId ? parseInt(assigneeId) : undefined,
+        priority: parseInt(priority),
+        status: mode === "edit" ? status : "new", // Keep existing status in edit mode, new for create
+        dueDate: deadline?.toISOString() || undefined,
         metadata: {
-          tags,
-          // store image as data URL for quick prototype; in prod upload to storage and store URL instead
           image: image ?? undefined,
-          // timesheets can be stored as array if desired
           timesheets,
         },
       };
 
-      // Use credentials: "include" so cookie-based auth/session is forwarded (works with withAuth on server)
-      const res = await fetch("/api/tasks", {
-        method: "POST",
+      // Add projectId only for create mode
+      if (mode === "create") {
+        payload.projectId = parseInt(projectId);
+      }
+
+      // Add version for optimistic locking in edit mode
+      if (mode === "edit" && initialData?.version) {
+        payload.version = initialData.version;
+      }
+
+      const url = mode === "create" 
+        ? "/api/tasks" 
+        : `/api/tasks/${initialData?.id}`;
+      
+      const method = mode === "create" ? "POST" : "PUT";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         credentials: "include",
       });
 
-      if (!res.ok) {
-        // attempt to read structured error from server
-        let errBody = {};
-        try {
-          errBody = await res.json();
-        } catch {
-          // ignore parse errors
-        }
-        throw new Error(
-          (errBody as any)?.error || `Failed to create task (${res.status})`
-        );
+      const data = await res.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: `Task ${mode === "create" ? "created" : "updated"} successfully`,
+        });
+
+        // Redirect to tasks page
+        router.push("/task");
+      } else {
+        const errorMsg = typeof data.error === 'string' 
+          ? data.error 
+          : data.error?.message || "Failed to save task";
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
-
-      const created = await res.json();
-
-      setSubmitSuccess("Task created successfully");
-
-      // Reset form in create mode
-      if (mode === "create") {
-        setTitle("");
-        setAssignee("");
-        setProject("");
-        setTags([]);
-        setDeadline(undefined);
-        setImage(null);
-        setDescription("");
-        setTimesheets([]);
-      }
-
-      // If you want to redirect after create, use router.push(...) from next/navigation in a client component
-      // or fire a callback to parent to refresh the task list.
-    } catch (e: any) {
-      setSubmitError(e?.message || "Failed to save task");
+    } catch (error: any) {
+      console.error("Error saving task:", error);
+      toast({
+        title: "Error",
+        description: error?.message || "An error occurred while saving the task",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleDiscard = () => {
+    router.push("/task");
   };
 
   return (
@@ -190,85 +330,135 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
       <Card className="p-6">
         {/* Header actions */}
         <div className="flex items-center justify-between mb-6">
-          <div className="w-72">
-            <Input placeholder="Search......" />
-          </div>
+          <h2 className="text-2xl font-bold">
+            {mode === "create" ? "Create New Task" : "Edit Task"}
+          </h2>
           <div className="flex gap-3">
-            <Button variant="outline" disabled={submitting}>
+            <Button 
+              variant="outline" 
+              onClick={handleDiscard}
+              disabled={submitting}
+            >
               Discard
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={submitting || loadingData}
+            >
               {submitting ? "Saving…" : "Save"}
             </Button>
           </div>
         </div>
-        {submitError && (
-          <div className="mb-4 text-sm text-red-600">{submitError}</div>
-        )}
-        {submitSuccess && (
-          <div className="mb-4 text-sm text-green-600">{submitSuccess}</div>
+
+        {loadingData && (
+          <div className="mb-4 text-sm text-muted-foreground">
+            Loading projects and users...
+          </div>
         )}
 
         {/* Title */}
         <div className="mb-6">
+          <Label htmlFor="task-title" className="text-base mb-2">
+            Task Title <span className="text-destructive">*</span>
+          </Label>
           <Input
+            id="task-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Task title"
-            className="text-xl h-12"
+            placeholder="Enter task title"
+            className="text-lg h-12"
+            required
           />
         </div>
 
-        {/* Assignee / Project */}
+        {/* Project / Assignee */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
-            <Label className="block mb-2">Assignee</Label>
-            <Select value={assignee} onValueChange={setAssignee}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(assigneeIdMap).map(([key]) => (
-                  <SelectItem key={key} value={key}>
-                    {key}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="block mb-2">
+              Project <span className="text-destructive">*</span>
+            </Label>
+            {loadingData ? (
+              <div className="h-11 border rounded-md flex items-center px-3 text-muted-foreground">
+                Loading projects...
+              </div>
+            ) : (
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((proj) => (
+                    <SelectItem key={proj.id} value={proj.id.toString()}>
+                      {proj.name} {proj.code ? `(${proj.code})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              {projects.length > 0 
+                ? `${projects.length} project${projects.length > 1 ? 's' : ''} available`
+                : "No projects available"
+              }
+            </p>
           </div>
 
           <div>
-            <Label className="block mb-2">Project</Label>
-            <Select value={project} onValueChange={setProject}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select project" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(projectIdMap).map(([key]) => (
-                  <SelectItem key={key} value={key}>
-                    {key}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="block mb-2">Assignee</Label>
+            {loadingData ? (
+              <div className="h-11 border rounded-md flex items-center px-3 text-muted-foreground">
+                Loading users...
+              </div>
+            ) : !projectId ? (
+              <div className="h-11 border rounded-md flex items-center px-3 text-muted-foreground">
+                Select a project first
+              </div>
+            ) : (
+              <Select value={assigneeId || "unassigned"} onValueChange={(val) => setAssigneeId(val === "unassigned" ? "" : val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {projectMembers.map((u) => (
+                    <SelectItem key={u.id} value={u.id.toString()}>
+                      {u.name || u.email} ({u.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {projectId && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {projectMembers.length > 0 
+                  ? `${projectMembers.length} member${projectMembers.length > 1 ? 's' : ''} in this project`
+                  : "No members assigned to this project"
+                }
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Tags / Deadline */}
+        {/* Priority / Deadline */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
-            <Label className="block mb-2">Tags</Label>
-            <MultiSelect
-              options={tagOptions}
-              selected={tags}
-              onChange={setTags}
-              placeholder="Select tags..."
-            />
+            <Label className="block mb-2">Priority</Label>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Low</SelectItem>
+                <SelectItem value="2">Medium</SelectItem>
+                <SelectItem value="3">High</SelectItem>
+                <SelectItem value="4">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
             <Label className="block mb-2">Deadline</Label>
-            <Popover>
+            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -284,8 +474,23 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
                 <Calendar
                   mode="single"
                   selected={deadline}
-                  onSelect={setDeadline}
+                  onSelect={(date) => {
+                    setDeadline(date);
+                    setDeadlineOpen(false);
+                  }}
                   initialFocus
+                  disabled={(date) => {
+                    const today = new Date(new Date().setHours(0, 0, 0, 0));
+                    // Can't select dates before today
+                    if (date < today) return true;
+                    // Can't select dates after project end date
+                    if (selectedProjectEndDate) {
+                      const projectEnd = new Date(selectedProjectEndDate);
+                      projectEnd.setHours(0, 0, 0, 0);
+                      if (date > projectEnd) return true;
+                    }
+                    return false;
+                  }}
                 />
               </PopoverContent>
             </Popover>
@@ -399,18 +604,21 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
             <PopoverContent className="w-80" align="start">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last changes by</span>
-                  <span className="font-medium">{lastChangedBy}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last changes on</span>
-                  <span className="font-medium">{lastChangedOn}</span>
+                  <span className="text-muted-foreground">Priority</span>
+                  <span className="font-medium">
+                    {priority === "1" && "Low"}
+                    {priority === "2" && "Medium"}
+                    {priority === "3" && "High"}
+                    {priority === "4" && "Urgent"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
                     Total working hours
                   </span>
-                  <span className="font-medium">{totalWorkingHours}</span>
+                  <span className="font-medium">
+                    {totalWorkingHours.toFixed(2)}h
+                  </span>
                 </div>
               </div>
             </PopoverContent>

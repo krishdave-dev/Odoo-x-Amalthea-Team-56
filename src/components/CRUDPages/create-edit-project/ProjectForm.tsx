@@ -320,9 +320,12 @@ export function ProjectForm({
         onSave?.(data.data);
         router.push("/project");
       } else {
+        const errorMsg = typeof data.error === 'string' 
+          ? data.error 
+          : data.error?.message || "Failed to save project";
         toast({
           title: "Error",
-          description: data.error || "Failed to save project",
+          description: errorMsg,
           variant: "destructive",
         });
       }
@@ -587,6 +590,7 @@ export function ProjectForm({
                         setStartDateOpen(false);
                       }}
                       initialFocus
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     />
                   </PopoverContent>
                 </Popover>
@@ -619,9 +623,12 @@ export function ProjectForm({
                         setEndDateOpen(false);
                       }}
                       initialFocus
-                      disabled={(date) => 
-                        startDate ? date < startDate : false
-                      }
+                      disabled={(date) => {
+                        const today = new Date(new Date().setHours(0, 0, 0, 0));
+                        if (date < today) return true;
+                        if (startDate && date < startDate) return true;
+                        return false;
+                      }}
                     />
                   </PopoverContent>
                 </Popover>

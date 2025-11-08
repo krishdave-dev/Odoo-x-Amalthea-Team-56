@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, AlertCircle } from "lucide-react";
+import { Calendar, User, AlertCircle, AlertTriangle } from "lucide-react";
 
 interface TaskCardProps {
   title: string;
@@ -15,12 +15,27 @@ interface TaskCardProps {
   assignedTo: string;
   dueDate: string;
   projectName: string;
+  status?: string;
+  taskId?: number;
 }
 
 const priorityColors = {
   low: "bg-blue-500/10 text-blue-700 border-blue-500/20",
   medium: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
   high: "bg-red-500/10 text-red-700 border-red-500/20",
+};
+
+// Helper to check if a task is overdue
+const isOverdue = (dueDate: string): boolean => {
+  try {
+    const due = new Date(dueDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+    return due < today;
+  } catch {
+    return false;
+  }
 };
 
 export function TaskCard({
@@ -30,15 +45,27 @@ export function TaskCard({
   assignedTo,
   dueDate,
   projectName,
+  status,
+  taskId,
 }: TaskCardProps) {
+  const overdue = isOverdue(dueDate);
+
   return (
     <Card className="hover:shadow-md transition-shadow cursor-pointer">
       <CardHeader className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base leading-tight">{title}</CardTitle>
-          <Badge className={priorityColors[priority]} variant="outline">
-            {priority}
-          </Badge>
+          <div className="flex items-center gap-1">
+            {overdue && (
+              <Badge className="bg-red-500/10 text-red-700 border-red-500/20" variant="outline">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Overdue
+              </Badge>
+            )}
+            <Badge className={priorityColors[priority]} variant="outline">
+              {priority}
+            </Badge>
+          </div>
         </div>
         <CardDescription className="text-sm line-clamp-2">
           {description}
@@ -54,7 +81,7 @@ export function TaskCard({
             <User className="h-3 w-3" />
             <span>{assignedTo}</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className={`flex items-center gap-1 ${overdue ? 'text-red-600 font-semibold' : ''}`}>
             <Calendar className="h-3 w-3" />
             <span>{dueDate}</span>
           </div>

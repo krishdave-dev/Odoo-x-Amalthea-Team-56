@@ -66,11 +66,13 @@ export class TaskService {
     pageSize: number = 25,
     filters?: {
       projectId?: number
+      projectIds?: number[]
       listId?: number
       assigneeId?: number
       status?: string
       priority?: number
       search?: string
+      organizationId?: number
     }
   ): Promise<PaginatedResponse<any>> {
     const skip = (page - 1) * pageSize
@@ -79,6 +81,9 @@ export class TaskService {
     const where: any = {
       deletedAt: null,
       ...(filters?.projectId && { projectId: filters.projectId }),
+      ...(filters?.projectIds && filters.projectIds.length > 0 && { 
+        projectId: { in: filters.projectIds } 
+      }),
       ...(filters?.listId && { listId: filters.listId }),
       ...(filters?.assigneeId && { assigneeId: filters.assigneeId }),
       ...(filters?.status && { status: filters.status }),
@@ -89,6 +94,14 @@ export class TaskService {
           { description: { contains: filters.search, mode: 'insensitive' } },
         ],
       }),
+    }
+    
+    // If organizationId is provided, ensure tasks are from that org's projects
+    if (filters?.organizationId) {
+      where.project = {
+        organizationId: filters.organizationId,
+        deletedAt: null,
+      }
     }
 
     const [data, total] = await Promise.all([

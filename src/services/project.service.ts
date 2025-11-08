@@ -97,14 +97,50 @@ export class ProjectService {
               id: true,
             },
           },
+          // Include financial data for budget calculations
+          purchaseOrders: {
+            where: { deletedAt: null },
+            select: {
+              totalAmount: true,
+            },
+          },
+          vendorBills: {
+            where: { deletedAt: null },
+            select: {
+              amount: true,
+            },
+          },
+          expenses: {
+            where: {
+              deletedAt: null,
+              status: { in: ['approved', 'paid'] },
+              billable: false,
+            },
+            select: {
+              amount: true,
+            },
+          },
         },
         orderBy: { updatedAt: 'desc' },
       }),
       prisma.project.count({ where }),
     ])
 
+    // Calculate actual costs for each project
+    const projectsWithCalculatedCosts = data.map((project: any) => {
+      const purchaseOrdersCost = project.purchaseOrders.reduce((sum: number, po: any) => sum + Number(po.totalAmount), 0)
+      const billsCost = project.vendorBills.reduce((sum: number, bill: any) => sum + Number(bill.amount), 0)
+      const expensesCost = project.expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0)
+      const actualCost = purchaseOrdersCost + billsCost + expensesCost
+
+      return {
+        ...project,
+        cachedCost: actualCost,
+      }
+    })
+
     return {
-      data,
+      data: projectsWithCalculatedCosts,
       pagination: {
         page,
         pageSize,
