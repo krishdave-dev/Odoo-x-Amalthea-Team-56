@@ -297,21 +297,57 @@ model Expense {
 }
 
 // Attachments
+// Production-Grade Attachment Storage with Outbox Pattern
 model Attachment {
   id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("attachment_id")
   organizationId  String   @db.Uuid @map("organization_id")
-  ownerType       String   @map("owner_type")
+  ownerType       String   @map("owner_type") // 'task', 'project', 'expense', 'invoice'
   ownerId         String   @db.Uuid @map("owner_id")
-  fileUrl         String   @map("file_url")
-  fileName        String?  @map("file_name")
+  fileName        String   @map("file_name")
+  mimeType        String   @map("mime_type")
+  fileSize        Int      @map("file_size")
+
+  // Primary Cloud Storage (Cloudinary)
+  cloudUrl        String?  @map("cloud_url")
+  cloudPublicId   String?  @map("cloud_public_id")
+
+  // Fallback Preview/Backup Data
+  backupData      Bytes?   @map("backup_data")
+  backupType      String?  @map("backup_type") // 'thumbnail', 'compressed', 'text_snippet'
+  backupAvailable Boolean  @default(false) @map("backup_available")
+
+  // Status Management
   uploadedBy      String?  @db.Uuid @map("uploaded_by")
   uploadedAt      DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  status          String   @default("active") // 'active', 'pending_upload', 'deleted', 'failed'
+  lastVerifiedAt  DateTime? @map("last_verified_at") @db.Timestamptz(6)
 
+  // Relations
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   uploader        User?        @relation(fields: [uploadedBy], references: [id])
 
   @@index([ownerType, ownerId], map: "ix_attachments_owner")
+  @@index([status], map: "ix_attachments_status")
+  @@index([organizationId], map: "ix_attachments_org")
   @@map("attachments")
+}
+
+// Outbox Pattern for Eventual Consistency
+model OutboxEvent {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("event_id")
+  eventType   String    @map("event_type") // 'UPLOAD_SUCCESS', 'DELETE_FILE', 'VERIFY_UPLOAD', 'REPAIR_UPLOAD'
+  entityType  String    @map("entity_type") // 'Attachment'
+  entityId    String    @db.Uuid @map("entity_id")
+  payload     Json      // Contains Cloudinary data, retry count, etc.
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  processed   Boolean   @default(false)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
+  error       String?   // Error message if processing failed
+  retryCount  Int       @default(0) @map("retry_count")
+
+  @@index([processed, createdAt], map: "ix_outbox_unprocessed")
+  @@index([eventType], map: "ix_outbox_event_type")
+  @@map("outbox_events")
 }
 
 // Task Comments
