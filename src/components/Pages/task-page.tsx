@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
@@ -25,152 +25,73 @@ import {
   TaskModel,
   TaskStatus,
 } from "@/components/MainPages/Task/TaskActionDialog";
-
-// Mock data - will be replaced with API calls later
-const mockTasks = {
-  new: [
-    {
-      id: 1,
-      title: "Design new landing page",
-      description:
-        "Create mockups for the new product landing page with updated branding",
-      priority: "high" as const,
-      assignedTo: "Sarah Kim",
-      dueDate: "Nov 12, 2025",
-      projectName: "Website Redesign",
-      status: "new" as TaskStatus,
-      hoursLogged: 0,
-      expenses: [],
-    },
-    {
-      id: 2,
-      title: "Write API documentation",
-      description: "Document all REST API endpoints with examples",
-      priority: "medium" as const,
-      assignedTo: "John Doe",
-      dueDate: "Nov 15, 2025",
-      projectName: "API Integration",
-      status: "new" as TaskStatus,
-      hoursLogged: 0,
-      expenses: [],
-    },
-    {
-      id: 3,
-      title: "Set up CI/CD pipeline",
-      description: "Configure automated testing and deployment workflow",
-      priority: "high" as const,
-      assignedTo: "Mike Chen",
-      dueDate: "Nov 10, 2025",
-      projectName: "Database Migration",
-      status: "new" as TaskStatus,
-      hoursLogged: 0,
-      expenses: [],
-    },
-  ],
-  inProgress: [
-    {
-      id: 4,
-      title: "Implement user authentication",
-      description:
-        "Add OAuth 2.0 authentication flow with social login options",
-      priority: "high" as const,
-      assignedTo: "Alice Johnson",
-      dueDate: "Nov 14, 2025",
-      projectName: "Mobile App Development",
-      status: "in_progress" as TaskStatus,
-      hoursLogged: 2,
-      expenses: [],
-    },
-    {
-      id: 5,
-      title: "Database schema design",
-      description: "Design and create database schema for new features",
-      priority: "medium" as const,
-      assignedTo: "Bob Smith",
-      dueDate: "Nov 16, 2025",
-      projectName: "Database Migration",
-      status: "in_progress" as TaskStatus,
-      hoursLogged: 1,
-      expenses: [],
-    },
-    {
-      id: 6,
-      title: "Create social media content",
-      description: "Develop content calendar and create posts for Q4 campaign",
-      priority: "low" as const,
-      assignedTo: "Emma Davis",
-      dueDate: "Nov 18, 2025",
-      projectName: "Marketing Campaign",
-      status: "in_progress" as TaskStatus,
-      hoursLogged: 1,
-      expenses: [],
-    },
-    {
-      id: 7,
-      title: "Security vulnerability scan",
-      description: "Run comprehensive security scan and document findings",
-      priority: "high" as const,
-      assignedTo: "David Lee",
-      dueDate: "Nov 11, 2025",
-      projectName: "Security Audit",
-      status: "in_progress" as TaskStatus,
-      hoursLogged: 0,
-      expenses: [],
-    },
-  ],
-  completed: [
-    {
-      id: 8,
-      title: "Setup project repository",
-      description:
-        "Initialize Git repository and setup branch protection rules",
-      priority: "medium" as const,
-      assignedTo: "Sarah Kim",
-      dueDate: "Nov 5, 2025",
-      projectName: "Website Redesign",
-      status: "completed" as TaskStatus,
-      hoursLogged: 5,
-      expenses: [],
-    },
-    {
-      id: 9,
-      title: "User research interviews",
-      description: "Conduct user interviews to gather requirements",
-      priority: "low" as const,
-      assignedTo: "John Doe",
-      dueDate: "Nov 3, 2025",
-      projectName: "Mobile App Development",
-      status: "completed" as TaskStatus,
-      hoursLogged: 3,
-      expenses: [],
-    },
-    {
-      id: 10,
-      title: "Logo design review",
-      description: "Review and approve final logo designs from agency",
-      priority: "medium" as const,
-      assignedTo: "Emma Davis",
-      dueDate: "Nov 1, 2025",
-      projectName: "Marketing Campaign",
-      status: "completed" as TaskStatus,
-      hoursLogged: 2,
-      expenses: [],
-    },
-  ],
-};
+// Fetch tasks from backend API
 
 export function TaskPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
-  const [tasksState, setTasksState] = useState<TaskModel[]>([
-    ...mockTasks.new,
-    ...mockTasks.inProgress,
-    ...mockTasks.completed,
-  ] as TaskModel[]);
+  const [tasksState, setTasksState] = useState<TaskModel[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: number; role: string } | null>(null);
 
-  const allTasks = tasksState;
+  useEffect(() => {
+    let isMounted = true;
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // Use the backend's allowed max (100) to satisfy validation
+        const res = await fetch(`/api/tasks?page=1&pageSize=100`, {
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          throw new Error(`Failed to load tasks (${res.status})`);
+        }
+        const json = await res.json();
+        const data = (json?.data ?? []) as TaskModel[];
+        console.log(data);
+        if (isMounted) setTasksState(data);
+      } catch (e: any) {
+        if (isMounted) setError(e?.message || "Failed to load tasks");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchTasks();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Load current user for role-based filtering
+  useEffect(() => {
+    let mounted = true;
+    const fetchMe = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (!res.ok) return; // unauthenticated or error => show nothing extra
+        const json = await res.json();
+        const user = json?.user;
+        if (mounted && user) setCurrentUser({ id: user.id, role: user.role });
+      } catch (_) {
+        // ignore
+      }
+    };
+    fetchMe();
+    return () => { mounted = false };
+  }, []);
+
+  // Role-based visibility: managers see all tasks, others only see their assigned tasks
+  const roleFilteredTasks = useMemo(() => {
+    if (!currentUser) return tasksState; // until user loads, show all to avoid flicker
+    if (currentUser.role === 'manager') return tasksState;
+    return tasksState.filter((t) => t.assigneeId === currentUser.id);
+  }, [tasksState, currentUser]);
+
+  const allTasks = roleFilteredTasks;
   const totalPages = Math.ceil(allTasks.length / itemsPerPage);
 
   // Metrics calculation from mock data
@@ -270,13 +191,13 @@ export function TaskPage() {
     return true;
   };
 
-  const filteredNew = tasksState
+  const filteredNew = roleFilteredTasks
     .filter((t) => t.status === "new")
     .filter(matchesFilters);
-  const filteredInProgress = tasksState
+  const filteredInProgress = roleFilteredTasks
     .filter((t) => t.status === "in_progress")
     .filter(matchesFilters);
-  const filteredCompleted = tasksState
+  const filteredCompleted = roleFilteredTasks
     .filter((t) => t.status === "completed")
     .filter(matchesFilters);
   const filteredAll = [
@@ -290,7 +211,7 @@ export function TaskPage() {
     );
   };
 
-  const role: "team" | "manager" | "admin" = "team"; // TODO: wire with auth later
+  const role: "team" | "manager" | "admin" | string = currentUser?.role ?? "team";
 
   // Use ProjectCard from MainPages for task cards/list so visuals match project cards
 
@@ -420,6 +341,12 @@ export function TaskPage() {
         <PaginationControls />
       </div>
 
+      {/* Loading / Error States */}
+      {loading && (
+        <div className="mb-4 text-sm text-muted-foreground">Loading tasks…</div>
+      )}
+      {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
+
       {/* Kanban or List View */}
       {view === "kanban" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:divide-x md:divide-neutral-200/10">
@@ -428,7 +355,7 @@ export function TaskPage() {
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-lg flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold">
-                  {mockTasks.new.length}
+                  {filteredNew.length}
                 </span>
                 New
               </h2>
@@ -460,7 +387,7 @@ export function TaskPage() {
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-lg flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                  {mockTasks.inProgress.length}
+                  {filteredInProgress.length}
                 </span>
                 In Progress
               </h2>
@@ -492,7 +419,7 @@ export function TaskPage() {
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-lg flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-                  {mockTasks.completed.length}
+                  {filteredCompleted.length}
                 </span>
                 Completed
               </h2>

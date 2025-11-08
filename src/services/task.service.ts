@@ -1,15 +1,13 @@
 import { prisma } from '@/lib/prisma'
 import { createAuditEvent, updateWithOptimisticLocking } from '@/lib/db-helpers'
-import type { Task, Prisma } from '@prisma/client'
 import type { PaginatedResponse } from '@/types/common'
-import { ValidationError } from '@/lib/error'
 
 export interface CreateTaskInput {
-  projectId: string
-  listId?: string
+  projectId: number
+  listId?: number
   title: string
   description?: string
-  assigneeId?: string
+  assigneeId?: number
   priority?: number
   status?: string
   estimateHours?: number
@@ -18,10 +16,10 @@ export interface CreateTaskInput {
 }
 
 export interface UpdateTaskInput {
-  listId?: string
+  listId?: number
   title?: string
   description?: string
-  assigneeId?: string | null
+  assigneeId?: number | null
   priority?: number
   status?: string
   estimateHours?: number
@@ -54,7 +52,7 @@ export class TaskService {
 
     const allowedTransitions = VALID_TRANSITIONS[currentStatus] || []
     if (!allowedTransitions.includes(newStatus)) {
-      throw new ValidationError(
+      throw new Error(
         `Invalid status transition from "${currentStatus}" to "${newStatus}"`
       )
     }
@@ -67,18 +65,18 @@ export class TaskService {
     page: number = 1,
     pageSize: number = 25,
     filters?: {
-      projectId?: string
-      listId?: string
-      assigneeId?: string
+      projectId?: number
+      listId?: number
+      assigneeId?: number
       status?: string
       priority?: number
       search?: string
     }
-  ): Promise<PaginatedResponse<Task>> {
+  ): Promise<PaginatedResponse<any>> {
     const skip = (page - 1) * pageSize
     const take = pageSize
 
-    const where: Prisma.TaskWhereInput = {
+    const where: any = {
       deletedAt: null,
       ...(filters?.projectId && { projectId: filters.projectId }),
       ...(filters?.listId && { listId: filters.listId }),
@@ -142,7 +140,7 @@ export class TaskService {
   /**
    * Get a single task by ID
    */
-  async getTaskById(taskId: string): Promise<Task | null> {
+  async getTaskById(taskId: number): Promise<any | null> {
     return prisma.task.findFirst({
       where: {
         id: taskId,
@@ -191,8 +189,8 @@ export class TaskService {
   /**
    * Create a new task
    */
-  async createTask(input: CreateTaskInput): Promise<Task> {
-    const task = await prisma.$transaction(async (tx) => {
+  async createTask(input: CreateTaskInput): Promise<any> {
+    const task = await prisma.$transaction(async (tx: any) => {
       // Verify project exists
       const project = await tx.project.findUnique({
         where: { id: input.projectId, deletedAt: null },
@@ -271,12 +269,12 @@ export class TaskService {
    * Update a task with optimistic locking and state validation
    */
   async updateTask(
-    taskId: string,
+    taskId: number,
     version: number,
     input: UpdateTaskInput
-  ): Promise<{ success: boolean; task?: Task; error?: string }> {
+  ): Promise<{ success: boolean; task?: any; error?: string }> {
     try {
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx: any) => {
         // Get current task
         const currentTask = await tx.task.findUnique({
           where: { id: taskId },
@@ -400,9 +398,9 @@ export class TaskService {
   /**
    * Soft delete a task
    */
-  async deleteTask(taskId: string): Promise<boolean> {
+  async deleteTask(taskId: number): Promise<boolean> {
     try {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         const task = await tx.task.findUnique({
           where: { id: taskId },
           include: {
@@ -440,7 +438,7 @@ export class TaskService {
   /**
    * Get tasks grouped by status (kanban board view)
    */
-  async getTasksByStatus(projectId: string) {
+  async getTasksByStatus(projectId: number) {
     const tasks = await prisma.task.findMany({
       where: {
         projectId,
@@ -468,7 +466,7 @@ export class TaskService {
     })
 
     // Group by status
-    const grouped: Record<string, Task[]> = {
+    const grouped: Record<string, any[]> = {
       new: [],
       in_progress: [],
       in_review: [],
@@ -476,7 +474,7 @@ export class TaskService {
       completed: [],
     }
 
-    tasks.forEach((task) => {
+    tasks.forEach((task: any) => {
       if (grouped[task.status]) {
         grouped[task.status].push(task)
       } else {

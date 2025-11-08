@@ -30,6 +30,7 @@ export interface TaskModel {
   description?: string;
   priority: "low" | "medium" | "high";
   assignedTo: string;
+  assigneeId?: number | null;
   dueDate: string; // human readable date
   projectName: string;
   status: TaskStatus;
