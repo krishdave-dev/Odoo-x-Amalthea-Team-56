@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
       query.pageSize,
       filters
     )
+    
 
     return paginatedResponse(result)
   } catch (error) {

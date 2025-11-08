@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
 import { Button } from "@/components/ui/button";
+import { StatsCards } from "@/components/MainPages/Stats/StatsCards";
 import {
   Plus,
   LayoutGrid,
@@ -174,6 +175,9 @@ export function ProjectPage() {
           </Link>
         </Button>
       </div>
+
+      {/* Stats Metrics */}
+      <StatsCards data={metrics} className="mb-6" />
 
       {/* View Toggle and Pagination */}
       <div className="mb-6 flex items-center justify-between">
