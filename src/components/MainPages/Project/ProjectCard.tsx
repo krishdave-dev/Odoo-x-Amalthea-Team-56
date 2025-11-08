@@ -25,6 +25,7 @@ interface ProjectCardProps {
   budget?: number | null;
   cachedCost?: number;
   organizationId: number;
+  showActions?: boolean; // Hide edit/delete for members
   onEdit?: (projectId: number) => void;
   onDelete?: (projectId: number) => void;
 }
@@ -42,6 +43,7 @@ export function ProjectCard({
   budget = null,
   cachedCost = 0,
   organizationId,
+  showActions = true,
   onEdit,
   onDelete,
 }: ProjectCardProps) {
@@ -162,33 +164,36 @@ export function ProjectCard({
             )}
           </div>
 
-          <div className="ml-4 shrink-0" onClick={(e) => e.stopPropagation()}>
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" className="p-2">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48" align="end">
-                <div className="flex flex-col gap-1">
-                  <button 
-                    onClick={handleEdit}
-                    className="flex items-center gap-2 p-2 hover:bg-neutral-100 rounded text-left w-full"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    <span>Edit Project</span>
-                  </button>
-                  <button 
-                    onClick={handleDelete}
-                    className="flex items-center gap-2 p-2 mt-1 text-red-600 hover:bg-red-50 rounded text-left w-full"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Delete Project</span>
-                  </button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+          {/* Actions Menu - Only show for users with edit/delete permissions */}
+          {showActions && (
+            <div className="ml-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" className="p-2">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48" align="end">
+                  <div className="flex flex-col gap-1">
+                    <button 
+                      onClick={handleEdit}
+                      className="flex items-center gap-2 p-2 hover:bg-neutral-100 rounded text-left w-full"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                      <span>Edit Project</span>
+                    </button>
+                    <button 
+                      onClick={handleDelete}
+                      className="flex items-center gap-2 p-2 mt-1 text-red-600 hover:bg-red-50 rounded text-left w-full"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Delete Project</span>
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </div>
       </CardContent>
 

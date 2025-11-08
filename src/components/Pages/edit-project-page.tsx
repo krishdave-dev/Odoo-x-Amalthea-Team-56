@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { ProjectForm } from "@/components/CRUDPages/create-edit-project/ProjectForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -25,11 +25,19 @@ interface ProjectData {
 export function EditProjectPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("id");
   
   const [projectData, setProjectData] = useState<ProjectData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Redirect members - they don't have permission to edit projects
+  useEffect(() => {
+    if (user && user.role === "member") {
+      router.push("/project");
+    }
+  }, [user, router]);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -93,6 +101,11 @@ export function EditProjectPage() {
         <p className="text-muted-foreground">Loading project...</p>
       </div>
     );
+  }
+
+  // Don't show anything if user is a member
+  if (!user || user.role === "member") {
+    return null;
   }
 
   if (!projectData) {

@@ -85,6 +85,9 @@ export function ProjectForm({
   const [projectManagerId, setProjectManagerId] = useState<string>(
     initialData?.projectManagerId?.toString() || ""
   );
+  const [projectManagers, setProjectManagers] = useState<string[]>(
+    initialData?.projectManagerId ? [initialData.projectManagerId.toString()] : []
+  );
   const [teamMembers, setTeamMembers] = useState<string[]>(
     initialData?.teamMembers?.map(id => id.toString()) || []
   );
@@ -162,14 +165,33 @@ export function ProjectForm({
     }));
 
   // Get team member options based on user role
-  // Managers should only see members and finance roles (not admins or other managers)
   const teamMemberOptions = orgUsers
     .filter(u => {
-      if (user?.role === "admin") {
-        // Admins can see all users
-        return true;
+      // Exclude the current user (admin/manager can't add themselves as team member)
+      if (user && u.id === user.id) {
+        return false;
       }
-      // Managers can only see members and finance roles
+      
+      // For admins: exclude users who are selected as project managers
+      if (user?.role === "admin") {
+        if (projectManagers.includes(u.id.toString())) {
+          return false;
+        }
+        return true; // Can see all other users
+      }
+      
+      // Managers can see:
+      // - members and finance roles
+      // - other managers (but not themselves - already filtered above)
+      if (user?.role === "manager") {
+        return (
+          u.role === "member" || 
+          u.role === "finance" || 
+          (u.role === "manager" && u.id !== user.id)
+        );
+      }
+      
+      // Default fallback
       return u.role === "member" || u.role === "finance";
     })
     .map(u => ({
@@ -204,11 +226,11 @@ export function ProjectForm({
       return false;
     }
 
-    // Only admins can assign project manager
-    if (user && user.role !== "admin" && projectManagerId && projectManagerId !== user.id.toString()) {
+    // Admins must select at least one project manager
+    if (user?.role === "admin" && projectManagers.length === 0) {
       toast({
-        title: "Permission Error",
-        description: "Only admins can assign project managers",
+        title: "Validation Error",
+        description: "Please select at least one project manager",
         variant: "destructive",
       });
       return false;
@@ -240,11 +262,22 @@ export function ProjectForm({
 
     setSubmitting(true);
 
+    // For admins: first project manager is the primary, rest are added as team members
+    // For managers: use their own ID as project manager
+    const primaryManagerId = user?.role === "admin" 
+      ? (projectManagers.length > 0 ? parseInt(projectManagers[0]) : undefined)
+      : user?.id;
+
+    // Combine team members with additional project managers (if admin selected multiple)
+    const allTeamMembers = user?.role === "admin" && projectManagers.length > 1
+      ? [...teamMembers, ...projectManagers.slice(1)] // Add additional managers as team members
+      : teamMembers;
+
     const projectData = {
       name: projectName,
       code: code || undefined,
       description: description || undefined,
-      projectManagerId: projectManagerId ? parseInt(projectManagerId) : undefined,
+      projectManagerId: primaryManagerId,
       startDate: startDate?.toISOString(),
       endDate: endDate?.toISOString(),
       status,
@@ -275,13 +308,13 @@ export function ProjectForm({
         });
 
         // If creating and team members selected, add them
-        if (mode === "create" && teamMembers.length > 0 && data.data?.id) {
-          await addTeamMembers(data.data.id);
+        if (mode === "create" && allTeamMembers.length > 0 && data.data?.id) {
+          await addTeamMembers(data.data.id, allTeamMembers);
         }
 
         // If editing and team members changed, update them
         if (mode === "edit" && initialData?.id) {
-          await updateTeamMembers(initialData.id);
+          await updateTeamMembers(initialData.id, allTeamMembers);
         }
 
         onSave?.(data.data);
@@ -305,9 +338,9 @@ export function ProjectForm({
     }
   };
 
-  const addTeamMembers = async (projectId: number) => {
+  const addTeamMembers = async (projectId: number, members: string[]) => {
     try {
-      const promises = teamMembers.map(userId =>
+      const promises = members.map(userId =>
         fetch(`/api/projects/${projectId}/members`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -323,11 +356,11 @@ export function ProjectForm({
     }
   };
 
-  const updateTeamMembers = async (projectId: number) => {
+  const updateTeamMembers = async (projectId: number, members: string[]) => {
     try {
       // Get current members from initial data
       const initialMembers = new Set(initialData?.teamMembers || []);
-      const currentMembers = new Set(teamMembers.map(id => parseInt(id)));
+      const currentMembers = new Set(members.map(id => parseInt(id)));
 
       // Find members to add (in current but not in initial)
       const toAdd = Array.from(currentMembers).filter(id => !initialMembers.has(id));
@@ -449,34 +482,47 @@ export function ProjectForm({
 
             {/* Row 2: Project Manager and Team Members */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Project Manager */}
+              {/* Project Manager(s) */}
               <div className="space-y-3">
                 <Label htmlFor="project-manager" className="text-base">
-                  Project Manager {user?.role === "admin" && <span className="text-destructive">*</span>}
+                  Project Manager{user?.role === "admin" && "s"} {user?.role === "admin" && <span className="text-destructive">*</span>}
                 </Label>
-                <Select 
-                  value={projectManagerId} 
-                  onValueChange={setProjectManagerId}
-                  disabled={user?.role !== "admin" || loadingUsers}
-                >
-                  <SelectTrigger id="project-manager" className="h-11">
-                    <SelectValue placeholder={
-                      loadingUsers ? "Loading managers..." : 
-                      user?.role !== "admin" ? "Auto-assigned" :
-                      "Select project manager"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {managerOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {user?.role !== "admin" && (
+                {user?.role === "admin" ? (
+                  // Admin can select multiple project managers
+                  loadingUsers ? (
+                    <div className="h-11 border rounded-md flex items-center px-3 text-muted-foreground">
+                      Loading managers...
+                    </div>
+                  ) : (
+                    <MultiSelect
+                      options={managerOptions}
+                      selected={projectManagers}
+                      onChange={setProjectManagers}
+                      placeholder="Select project managers..."
+                    />
+                  )
+                ) : (
+                  // Manager sees disabled field showing auto-assignment
+                  <Select 
+                    value={projectManagerId} 
+                    onValueChange={setProjectManagerId}
+                    disabled={true}
+                  >
+                    <SelectTrigger id="project-manager" className="h-11">
+                      <SelectValue placeholder="Auto-assigned" />
+                    </SelectTrigger>
+                  </Select>
+                )}
+                {user?.role !== "admin" ? (
                   <p className="text-xs text-muted-foreground">
                     You will be auto-assigned as project manager
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {projectManagers.length > 0 
+                      ? `${projectManagers.length} manager${projectManagers.length > 1 ? 's' : ''} selected. First will be primary.`
+                      : "Select one or more project managers"
+                    }
                   </p>
                 )}
               </div>
@@ -503,7 +549,10 @@ export function ProjectForm({
                   />
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Assign team members to this project
+                  {user?.role === "admin" 
+                    ? "Assign team members to this project"
+                    : "Assign members, finance users, and other managers"
+                  }
                   {!loadingUsers && ` (${teamMemberOptions.length} available)`}
                 </p>
               </div>

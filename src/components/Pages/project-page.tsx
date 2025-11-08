@@ -297,15 +297,21 @@ export function ProjectPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           <p className="text-muted-foreground mt-2">
-            Manage and track all your projects in one place
+            {user.role === "member" 
+              ? "View and track projects you are assigned to"
+              : "Manage and track all your projects in one place"
+            }
           </p>
         </div>
-        <Button asChild>
-          <Link href="/createproject">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Link>
-        </Button>
+        {/* Only show New Project button for admin, manager, and finance */}
+        {user.role !== "member" && (
+          <Button asChild>
+            <Link href="/createproject">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Stats Metrics */}
@@ -384,6 +390,7 @@ export function ProjectPage() {
               budget={project.budget ? Number(project.budget) : null}
               cachedCost={Number(project.cachedCost)}
               organizationId={user.organizationId}
+              showActions={user.role !== "member"}
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
             />
@@ -406,6 +413,7 @@ export function ProjectPage() {
               budget={project.budget ? Number(project.budget) : null}
               cachedCost={Number(project.cachedCost)}
               organizationId={user.organizationId}
+              showActions={user.role !== "member"}
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
             />
