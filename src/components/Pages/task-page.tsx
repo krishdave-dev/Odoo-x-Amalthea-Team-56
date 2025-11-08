@@ -35,7 +35,10 @@ export function TaskPage() {
   const [tasksState, setTasksState] = useState<TaskModel[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<{ id: number; role: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    id: number;
+    role: string;
+  } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,7 +74,7 @@ export function TaskPage() {
     let mounted = true;
     const fetchMe = async () => {
       try {
-        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (!res.ok) return; // unauthenticated or error => show nothing extra
         const json = await res.json();
         const user = json?.user;
@@ -81,13 +84,15 @@ export function TaskPage() {
       }
     };
     fetchMe();
-    return () => { mounted = false };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Role-based visibility: managers see all tasks, others only see their assigned tasks
   const roleFilteredTasks = useMemo(() => {
     if (!currentUser) return tasksState; // until user loads, show all to avoid flicker
-    if (currentUser.role === 'manager') return tasksState;
+    if (currentUser.role === "manager") return tasksState;
     return tasksState.filter((t) => t.assigneeId === currentUser.id);
   }, [tasksState, currentUser]);
 
@@ -211,7 +216,8 @@ export function TaskPage() {
     );
   };
 
-  const role: "team" | "manager" | "admin" | string = currentUser?.role ?? "team";
+  const role: "team" | "manager" | "admin" | string =
+    currentUser?.role ?? "team";
 
   // Use ProjectCard from MainPages for task cards/list so visuals match project cards
 
