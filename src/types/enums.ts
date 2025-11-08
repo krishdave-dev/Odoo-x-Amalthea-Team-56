@@ -43,10 +43,22 @@ export const USER_ROLES = {
   ADMIN: 'admin',
   MANAGER: 'manager',
   MEMBER: 'member',
-  VIEWER: 'viewer',
+  FINANCE: 'finance',
 } as const
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES]
+
+/**
+ * Invitation status
+ */
+export const INVITATION_STATUSES = {
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  REJECTED: 'rejected',
+  EXPIRED: 'expired',
+} as const
+
+export type InvitationStatus = typeof INVITATION_STATUSES[keyof typeof INVITATION_STATUSES]
 
 /**
  * Invoice/Bill status

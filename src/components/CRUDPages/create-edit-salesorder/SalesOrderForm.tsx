@@ -58,12 +58,34 @@ export function SalesOrderForm({ mode = "create", initialData }: SalesOrderFormP
     setLines((prev: LineState[]) => [...prev, { product: "", qty: 1, unit: "", price: 0, tax: "0%", amount: 0 }]);
   };
 
+  // product popup
+  const [productPopupOpen, setProductPopupOpen] = React.useState(false);
+
+  const handleSaveProduct = (p: { productName: string; price?: number; tax?: string }) => {
+    const price = p.price ?? 0;
+    const tax = p.tax ?? "0%";
+    setLines((prev: LineState[]) => [
+      ...prev,
+      { product: p.productName || "", qty: 1, unit: "", price: price, tax: tax, amount: Number(1) * Number(price) },
+    ]);
+  };
+
+  // invoice popup
+  const [invoicePopupOpen, setInvoicePopupOpen] = React.useState(false);
+
+  const handleConfirmInvoice = (payload?: { lines?: any[]; customer?: string }) => {
+    // placeholder: you can wire this to an API later
+    // For now we simply log the invoice payload
+    // eslint-disable-next-line no-console
+    console.log("Invoice created:", { payload, lines });
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="p-6 min-h-[520px]">
         {/* Action buttons */}
         <div className="flex items-center gap-3 mb-4">
-          <Button>Create Invoice</Button>
+          <Button onClick={() => setInvoicePopupOpen(true)}>Create Invoice</Button>
           <Button>Confirm</Button>
           <Button variant="outline">Cancel</Button>
         </div>
@@ -154,8 +176,20 @@ export function SalesOrderForm({ mode = "create", initialData }: SalesOrderFormP
           </Table>
 
           <div className="mt-4">
-            <Button variant="ghost" className="text-red-400 font-medium">Add a product</Button>
+            <Button variant="ghost" className="text-red-400 font-medium" onClick={() => setProductPopupOpen(true)}>Add a product</Button>
           </div>
+
+          {/* Product popup component - lazy import below */}
+          {typeof window !== "undefined" ? (
+            // import locally to avoid server-side rendering issues
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            (() => {
+              const Prod = require("@/components/CRUDPages/create-edit-salesorder/ProductPopup").default;
+              return (
+                <Prod open={productPopupOpen} onClose={() => setProductPopupOpen(false)} onSave={handleSaveProduct} />
+              );
+            })()
+          ) : null}
         </div>
 
         {/* Totals area aligned right */}
@@ -172,6 +206,16 @@ export function SalesOrderForm({ mode = "create", initialData }: SalesOrderFormP
           </div>
         </div>
       </Card>
+      {/* Invoice popup - lazy require to avoid SSR issues */}
+      {typeof window !== "undefined" ? (
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        (() => {
+          const Inv = require("@/components/CRUDPages/create-edit-salesorder/InvoicePopup").default;
+          return (
+            <Inv open={invoicePopupOpen} onClose={() => setInvoicePopupOpen(false)} onConfirm={handleConfirmInvoice} lines={lines} onAddProduct={() => setProductPopupOpen(true)} />
+          );
+        })()
+      ) : null}
     </div>
   );
 }

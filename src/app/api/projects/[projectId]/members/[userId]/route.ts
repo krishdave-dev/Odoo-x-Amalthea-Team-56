@@ -7,7 +7,7 @@ import {
   noContentResponse,
 } from '@/lib/response'
 import { handleError, NotFoundError } from '@/lib/error'
-import { updateProjectMemberSchema, parseBody, uuidSchema } from '@/lib/validation'
+import { updateProjectMemberSchema, parseBody, idSchema } from '@/lib/validation'
 
 /**
  * GET /api/projects/:projectId/members/:userId
@@ -19,8 +19,8 @@ export async function GET(
 ) {
   try {
     const { projectId, userId } = await params
-    uuidSchema.parse(projectId)
-    uuidSchema.parse(userId)
+    idSchema.parse(projectId)
+    idSchema.parse(userId)
 
     const member = await prisma.projectMember.findUnique({
       where: {
@@ -62,8 +62,8 @@ export async function PATCH(
 ) {
   try {
     const { projectId, userId } = await params
-    uuidSchema.parse(projectId)
-    uuidSchema.parse(userId)
+    idSchema.parse(projectId)
+    idSchema.parse(userId)
 
     const body = await parseBody(req, updateProjectMemberSchema)
 
@@ -127,8 +127,8 @@ export async function DELETE(
 ) {
   try {
     const { projectId, userId } = await params
-    uuidSchema.parse(projectId)
-    uuidSchema.parse(userId)
+    idSchema.parse(projectId)
+    idSchema.parse(userId)
 
     // Get project to access organizationId
     const project = await prisma.project.findUnique({

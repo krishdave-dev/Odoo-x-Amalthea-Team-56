@@ -61,12 +61,33 @@ export function PurchaseOrderForm({ mode = "create", initialData }: PurchaseOrde
     setLines((prev: LineState[]) => [...prev, { product: "", qty: 1, unit: "", price: 0, tax: "0%", amount: 0 }]);
   };
 
+  // product popup (reuse sales product popup)
+  const [productPopupOpen, setProductPopupOpen] = React.useState(false);
+
+  const handleSaveProduct = (p: { productName: string; price?: number; tax?: string }) => {
+    const price = p.price ?? 0;
+    const tax = p.tax ?? "0%";
+    setLines((prev: LineState[]) => [
+      ...prev,
+      { product: p.productName || "", qty: 1, unit: "", price: price, tax: tax, amount: Number(1) * Number(price) },
+    ]);
+  };
+
+  // invoice popup
+  const [invoicePopupOpen, setInvoicePopupOpen] = React.useState(false);
+
+  const handleConfirmInvoice = (payload?: { lines?: any[]; vendor?: string }) => {
+    // placeholder: wire to API later
+    // eslint-disable-next-line no-console
+    console.log("Purchase invoice created:", { payload, lines });
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="p-6 min-h-[520px]">
         {/* Action buttons */}
         <div className="flex items-center gap-3 mb-4">
-          <Button>Create Bills</Button>
+          <Button onClick={() => setInvoicePopupOpen(true)}>Create Bills</Button>
           <Button>Confirm</Button>
           <Button variant="outline">Cancel</Button>
         </div>
@@ -160,6 +181,28 @@ export function PurchaseOrderForm({ mode = "create", initialData }: PurchaseOrde
             <Button variant="ghost" onClick={addLine} className="text-red-400 font-medium">Add a product</Button>
           </div>
         </div>
+
+        {/* purchase invoice popup - lazy require to avoid SSR issues */}
+        {typeof window !== "undefined" ? (
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          (() => {
+            const Inv = require("@/components/CRUDPages/create-edit-purchaseorder/InvoicePopup").default;
+            return (
+              <Inv open={invoicePopupOpen} onClose={() => setInvoicePopupOpen(false)} onConfirm={handleConfirmInvoice} lines={lines} onAddProduct={() => setProductPopupOpen(true)} />
+            );
+          })()
+        ) : null}
+
+        {/* product popup reused from sales product modal */}
+        {typeof window !== "undefined" ? (
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          (() => {
+            const Prod = require("@/components/CRUDPages/create-edit-salesorder/ProductPopup").default;
+            return (
+              <Prod open={productPopupOpen} onClose={() => setProductPopupOpen(false)} onSave={handleSaveProduct} />
+            );
+          })()
+        ) : null}
 
         {/* Totals area aligned right */}
         <div className="flex justify-end mt-6">

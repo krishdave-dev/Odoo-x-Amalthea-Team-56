@@ -168,64 +168,28 @@ export function ProjectPage() {
             <ProjectCard
               key={project.id}
               title={project.title}
-              description={project.description}
-              status={project.status}
-              teamMembers={project.teamMembers}
-              dueDate={project.dueDate}
-              tasksCompleted={project.tasksCompleted}
-              totalTasks={project.totalTasks}
+              tags={[project.status]}
+              images={[]}
+              deadline={project.dueDate}
+              managerName={"Abhi"}
+              managerAvatar={undefined}
+              tasksCount={project.totalTasks}
             />
           ))}
         </div>
       ) : (
         <div className="space-y-3">
           {paginatedProjects.map((project) => (
-            <div
+            <ProjectCard
               key={project.id}
-              className="rounded-lg border p-4 hover:bg-accent/50 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-lg">{project.title}</h3>
-                    <span
-                      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${
-                        project.status === "active"
-                          ? "bg-green-500/10 text-green-700 border-green-500/20"
-                          : project.status === "completed"
-                          ? "bg-blue-500/10 text-blue-700 border-blue-500/20"
-                          : "bg-yellow-500/10 text-yellow-700 border-yellow-500/20"
-                      }`}
-                    >
-                      {project.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {project.description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                  <div className="text-center">
-                    <div className="font-semibold text-foreground">
-                      {project.teamMembers}
-                    </div>
-                    <div className="text-xs">Members</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-semibold text-foreground">
-                      {project.tasksCompleted}/{project.totalTasks}
-                    </div>
-                    <div className="text-xs">Tasks</div>
-                  </div>
-                  <div className="text-center min-w-24">
-                    <div className="font-semibold text-foreground">
-                      {project.dueDate}
-                    </div>
-                    <div className="text-xs">Due Date</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              title={project.title}
+              tags={[project.status]}
+              images={[]}
+              deadline={project.dueDate}
+              managerName={"Abhi"}
+              managerAvatar={undefined}
+              tasksCount={project.totalTasks}
+            />
           ))}
         </div>
       )}

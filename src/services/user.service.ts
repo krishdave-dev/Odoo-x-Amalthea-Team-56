@@ -40,9 +40,10 @@ export class UserService {
   ): Promise<PaginatedResponse<User>> {
     const skip = (page - 1) * pageSize
     const take = pageSize
+    const orgId = parseInt(organizationId, 10)
 
     const where: Prisma.UserWhereInput = {
-      organizationId,
+      organizationId: orgId,
       deletedAt: null,
       ...(filters?.role && { role: filters.role }),
       ...(filters?.isActive !== undefined && { isActive: filters.isActive }),
@@ -102,10 +103,13 @@ export class UserService {
     userId: string,
     organizationId: string
   ): Promise<Partial<User> | null> {
+    const usrId = parseInt(userId, 10)
+    const orgId = parseInt(organizationId, 10)
+    
     return prisma.user.findFirst({
       where: {
-        id: userId,
-        organizationId,
+        id: usrId,
+        organizationId: orgId,
         deletedAt: null,
       },
       select: {
@@ -154,11 +158,13 @@ export class UserService {
    * Create a new user
    */
   async createUser(input: CreateUserInput): Promise<Partial<User>> {
+    const orgId = parseInt(input.organizationId, 10)
+    
     const user = await prisma.$transaction(async (tx) => {
       // Check for duplicate email within organization
       const existing = await tx.user.findFirst({
         where: {
-          organizationId: input.organizationId,
+          organizationId: orgId,
           email: input.email,
           deletedAt: null,
         },
@@ -170,7 +176,7 @@ export class UserService {
 
       const newUser = await tx.user.create({
         data: {
-          organizationId: input.organizationId,
+          organizationId: orgId,
           email: input.email,
           name: input.name,
           passwordHash: input.passwordHash,
@@ -193,7 +199,7 @@ export class UserService {
 
       // Create audit event
       await createAuditEvent(
-        input.organizationId,
+        orgId,
         'user',
         newUser.id,
         'user.created',
@@ -214,14 +220,17 @@ export class UserService {
     organizationId: string,
     input: UpdateUserInput
   ): Promise<Partial<User> | null> {
+    const usrId = parseInt(userId, 10)
+    const orgId = parseInt(organizationId, 10)
+    
     const user = await prisma.$transaction(async (tx) => {
       // If updating email, check for duplicates
       if (input.email) {
         const existing = await tx.user.findFirst({
           where: {
-            organizationId,
+            organizationId: orgId,
             email: input.email,
-            id: { not: userId },
+            id: { not: usrId },
             deletedAt: null,
           },
         })
@@ -233,8 +242,8 @@ export class UserService {
 
       const updated = await tx.user.update({
         where: {
-          id: userId,
-          organizationId,
+          id: usrId,
+          organizationId: orgId,
         },
         data: {
           ...input,
@@ -255,11 +264,11 @@ export class UserService {
 
       // Create audit event
       await createAuditEvent(
-        organizationId,
+        orgId,
         'user',
-        userId,
+        usrId,
         'user.updated',
-        { userId, changes: input }
+        { userId: usrId, changes: input }
       )
 
       return updated
@@ -273,11 +282,14 @@ export class UserService {
    */
   async deleteUser(userId: string, organizationId: string): Promise<boolean> {
     try {
+      const usrId = parseInt(userId, 10)
+      const orgId = parseInt(organizationId, 10)
+      
       await prisma.$transaction(async (tx) => {
         await tx.user.update({
           where: {
-            id: userId,
-            organizationId,
+            id: usrId,
+            organizationId: orgId,
           },
           data: {
             deletedAt: new Date(),
@@ -286,11 +298,11 @@ export class UserService {
         })
 
         await createAuditEvent(
-          organizationId,
+          orgId,
           'user',
-          userId,
+          usrId,
           'user.deleted',
-          { userId }
+          { userId: usrId }
         )
       })
 

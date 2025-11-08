@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { userService } from '@/services/user.service'
 import { successResponse } from '@/lib/response'
 import { handleError } from '@/lib/error'
-import { uuidSchema } from '@/lib/validation'
+import { idSchema } from '@/lib/validation'
 
 /**
  * GET /api/users/:id/stats
@@ -14,7 +14,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    uuidSchema.parse(id)
+    idSchema.parse(id)
 
     const { searchParams } = new URL(req.url)
     const organizationId = searchParams.get('organizationId')

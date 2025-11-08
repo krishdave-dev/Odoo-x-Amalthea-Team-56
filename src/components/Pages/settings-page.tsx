@@ -1,86 +1,229 @@
 "use client";
 
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { InviteUserDialog } from "@/components/invitations/InviteUserDialog";
+import { PendingInvitationsList } from "@/components/invitations/PendingInvitationsList";
+import { Building2, Shield, User, Mail } from "lucide-react";
+import { useState } from "react";
 
 export function SettingsPage() {
-  const headers = [
-    "Tasks",
-    "Sales Order",
-    "Purchase Order",
-    "Expenses",
-    "Dashboard",
-    "Invoices",
-  ];
+  const { user } = useAuth();
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // Sample placeholder rows — frontend-only, will be replaced by backend data later
-  const rows = [
-    {
-      Tasks: "Design UI",
-      "Sales Order": "SO-001",
-      "Purchase Order": "PO-123",
-      Expenses: "$120.00",
-      Dashboard: "Ready",
-      Invoices: "INV-900",
-    },
-    {
-      Tasks: "Implement API",
-      "Sales Order": "SO-002",
-      "Purchase Order": "PO-456",
-      Expenses: "$560.00",
-      Dashboard: "In Progress",
-      Invoices: "INV-901",
-    },
-  ];
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-purple-100 text-purple-800';
+      case 'manager':
+        return 'bg-blue-100 text-blue-800';
+      case 'finance':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const canInviteUsers = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'finance';
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-4">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your account and preferences</p>
+        <p className="text-muted-foreground mt-2">Manage your account and organization</p>
       </div>
 
-      {/* Action row */}
-      <div className="flex items-center justify-between mb-4">
-        <button className="bg-violet-600 text-white px-4 py-2 rounded-md font-semibold">New</button>
-        <input
-          aria-label="Search"
-          placeholder="Search......"
-          className="bg-transparent border rounded-md px-3 py-2 text-sm w-56 placeholder:text-muted-foreground"
-        />
-      </div>
+      <div className="grid gap-6">
+        {/* User Profile Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              User Profile
+            </CardTitle>
+            <CardDescription>Your account information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Name</p>
+                <p className="font-medium">{user?.name || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Email</p>
+                <p className="font-medium">{user?.email || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Role</p>
+                <Badge className={getRoleBadgeColor(user?.role || 'member')}>
+                  {user?.role || 'member'}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Table area */}
-      <div className="rounded-lg border p-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {headers.map((h) => (
-                <TableHead key={h}>{h}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
+        {/* Organization Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Organization
+            </CardTitle>
+            <CardDescription>Your organization details</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Organization Name</p>
+              <p className="font-medium">{user?.organizationName || 'N/A'}</p>
+            </div>
+          </CardContent>
+        </Card>
 
-          <TableBody>
-            {rows.map((r, i) => (
-              <TableRow key={i}>
-                <TableCell>{r.Tasks}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{r["Sales Order"]}</Badge>
-                </TableCell>
-                <TableCell>{r["Purchase Order"]}</TableCell>
-                <TableCell>{r.Expenses}</TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">{r.Dashboard}</span>
-                </TableCell>
-                <TableCell>{r.Invoices}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
+        {/* Permissions Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Your Permissions
+            </CardTitle>
+            <CardDescription>What you can do based on your role</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {user?.role === 'admin' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Full system access</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Manage all projects</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Manage all tasks</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Approve expenses</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Manage financial documents</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Invite users</span>
+                  </div>
+                </>
+              )}
+              {user?.role === 'manager' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Create and edit projects</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Assign team members</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Manage tasks</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Approve expenses</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Trigger invoices</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Invite team members</span>
+                  </div>
+                </>
+              )}
+              {user?.role === 'finance' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Create sales orders</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Create purchase orders</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Manage invoices</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Manage vendor bills</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Create expenses</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Invite finance users</span>
+                  </div>
+                </>
+              )}
+              {user?.role === 'member' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>View assigned tasks</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Update task status</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Log hours</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                    <span>Submit expenses</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-          <TableCaption>List of items (frontend placeholder)</TableCaption>
-        </Table>
+        {/* Team Management - only for admins, managers, and finance */}
+        {canInviteUsers && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    Team Management
+                  </CardTitle>
+                  <CardDescription>Invite new users to your organization</CardDescription>
+                </div>
+                <InviteUserDialog onInviteSent={() => setRefreshKey(prev => prev + 1)} />
+              </div>
+            </CardHeader>
+          </Card>
+        )}
+
+        {/* Pending Invitations - only for admins, managers, and finance */}
+        {canInviteUsers && (
+          <PendingInvitationsList key={refreshKey} />
+        )}
       </div>
     </div>
   );
 }
+

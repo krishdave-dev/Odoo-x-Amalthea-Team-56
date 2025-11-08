@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createAuditEvent } from '@/lib/db-helpers'
+import { getCurrentUser } from '@/lib/auth'
+import { can } from '@/lib/permissions'
 import {
   successResponse,
   paginatedResponse,
@@ -8,13 +10,14 @@ import {
   notFoundResponse,
   noContentResponse,
   conflictResponse,
+  errorResponse,
 } from '@/lib/response'
 import { handleError, ConflictError, NotFoundError } from '@/lib/error'
 import {
   createProjectMemberSchema,
   updateProjectMemberSchema,
   parseBody,
-  uuidSchema,
+  idSchema,
 } from '@/lib/validation'
 
 /**
@@ -26,11 +29,30 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return errorResponse('Authentication required', 401)
+    }
+
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    const parsedProjectId = idSchema.parse(projectId)
+
+    // Verify project exists and user has access
+    const project = await prisma.project.findUnique({
+      where: { id: parsedProjectId, deletedAt: null },
+      select: { organizationId: true, projectManagerId: true },
+    })
+
+    if (!project) {
+      return notFoundResponse('Project')
+    }
+
+    if (project.organizationId !== user.organizationId) {
+      return errorResponse('Access denied to this organization', 403)
+    }
 
     const members = await prisma.projectMember.findMany({
-      where: { projectId },
+      where: { projectId: parsedProjectId },
       include: {
         user: {
           select: {
@@ -55,37 +77,67 @@ export async function GET(
 /**
  * POST /api/projects/:projectId/members
  * Add a member to a project
+ * - Only admins and the project manager can add members
+ * - Managers can only add members to projects they manage
  */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return errorResponse('Authentication required', 401)
+    }
+
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    const parsedProjectId = idSchema.parse(projectId)
 
     const body = await parseBody(req, createProjectMemberSchema)
 
-    // Verify project exists and get organization
+    // Verify project exists and get details
     const project = await prisma.project.findUnique({
-      where: { id: projectId, deletedAt: null },
-      select: { organizationId: true },
+      where: { id: parsedProjectId, deletedAt: null },
+      select: { 
+        organizationId: true,
+        projectManagerId: true,
+        name: true,
+      },
     })
 
     if (!project) {
       throw new NotFoundError('Project')
     }
 
-    // Verify user exists and belongs to same organization
-    const user = await prisma.user.findFirst({
+    // Check organization access
+    if (project.organizationId !== user.organizationId) {
+      return errorResponse('Access denied to this organization', 403)
+    }
+
+    // Permission check: Only admin or the project manager can add members
+    const isAdmin = user.role === 'admin'
+    const isProjectManager = project.projectManagerId === user.id
+
+    if (!isAdmin && !isProjectManager) {
+      return errorResponse('Only admins or the project manager can add members to this project', 403)
+    }
+
+    // Verify user to be added exists and belongs to same organization
+    const memberUser = await prisma.user.findFirst({
       where: {
         id: body.userId,
         organizationId: project.organizationId,
         deletedAt: null,
       },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
     })
 
-    if (!user) {
+    if (!memberUser) {
       throw new NotFoundError('User or user does not belong to this organization')
     }
 
@@ -93,7 +145,7 @@ export async function POST(
     const existing = await prisma.projectMember.findUnique({
       where: {
         projectId_userId: {
-          projectId,
+          projectId: parsedProjectId,
           userId: body.userId,
         },
       },
@@ -104,10 +156,10 @@ export async function POST(
     }
 
     // Add member
-    const member = await prisma.$transaction(async (tx) => {
+    const member = await prisma.$transaction(async (tx: any) => {
       const newMember = await tx.projectMember.create({
         data: {
-          projectId,
+          projectId: parsedProjectId,
           userId: body.userId,
           roleInProject: body.roleInProject,
         },
@@ -128,7 +180,13 @@ export async function POST(
         'project_member',
         newMember.id,
         'project_member.added',
-        { projectId, userId: body.userId, role: body.roleInProject }
+        { 
+          projectId: parsedProjectId, 
+          userId: body.userId, 
+          role: body.roleInProject,
+          addedBy: user.id,
+          addedByRole: user.role,
+        }
       )
 
       return newMember

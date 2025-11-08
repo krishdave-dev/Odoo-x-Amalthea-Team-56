@@ -1,79 +1,102 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar, MoreVertical, Edit3, Trash2, Flag } from "lucide-react";
 
 interface ProjectCardProps {
   title: string;
-  description: string;
-  status: "active" | "completed" | "planning";
-  teamMembers: number;
-  dueDate: string;
-  tasksCompleted: number;
-  totalTasks: number;
+  tags?: string[];
+  images?: string[];
+  deadline?: string;
+  managerName?: string;
+  managerAvatar?: string;
+  tasksCount?: number;
 }
-
-const statusColors = {
-  active: "bg-green-500/10 text-green-700 border-green-500/20",
-  completed: "bg-blue-500/10 text-blue-700 border-blue-500/20",
-  planning: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
-};
 
 export function ProjectCard({
   title,
-  description,
-  status,
-  teamMembers,
-  dueDate,
-  tasksCompleted,
-  totalTasks,
+  tags = [],
+  images = [],
+  deadline,
+  managerName = "",
+  managerAvatar,
+  tasksCount = 0,
 }: ProjectCardProps) {
-  const progress = (tasksCompleted / totalTasks) * 100;
-
   return (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-xl">{title}</CardTitle>
-          <Badge className={statusColors[status]} variant="outline">
-            {status}
-          </Badge>
-        </div>
-        <CardDescription className="line-clamp-2">
-          {description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <div className="mb-2 flex justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">
-              {tasksCompleted}/{totalTasks} tasks
-            </span>
+    <Card className="hover:shadow-lg transition-shadow cursor-pointer p-4">
+      <CardContent className="p-0">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {tags.map((t) => (
+                <Badge key={t} className="bg-emerald-100 text-emerald-800" variant="outline">{t}</Badge>
+              ))}
+            </div>
+
+            <h3 className="text-lg font-semibold mb-3">{title}</h3>
+
+            {/* image thumbnails */}
+            <div className="flex items-center gap-2 mb-4">
+              {images.length ? (
+                images.slice(0, 3).map((src, i) => (
+                  <div key={i} className="w-20 h-14 overflow-hidden rounded-lg border">
+                    <img src={src} alt={`img-${i}`} className="w-full h-full object-cover" />
+                  </div>
+                ))
+              ) : (
+                <div className="w-20 h-14 bg-neutral-100 rounded-lg" />
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Flag className="h-4 w-4" />
+                <span>{deadline ?? "-"}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {managerAvatar ? (
+                  <img src={managerAvatar} alt={managerName} className="w-6 h-6 rounded-full" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-neutral-200" />
+                )}
+                <span>{tasksCount} tasks</span>
+              </div>
+            </div>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-            <div
-              className="h-full bg-primary transition-all"
-              style={{ width: `${progress}%` }}
-            />
+
+          <div className="ml-4 shrink-0">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" className="p-2">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-40">
+                <div className="flex flex-col">
+                  <button className="flex items-center gap-2 p-2 hover:bg-neutral-100 rounded">
+                    <Edit3 className="h-4 w-4" />
+                    <span>Edit</span>
+                    <span className="ml-auto inline-block bg-muted text-muted-foreground px-3 py-0.5 rounded-full text-xs">{managerName || "Uncommon Hippopotamus"}</span>
+                  </button>
+                  <button className="flex items-center gap-2 p-2 mt-2 text-red-600 hover:bg-neutral-100 rounded">
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between text-sm text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <Users className="h-4 w-4" />
-          <span>{teamMembers} members</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Calendar className="h-4 w-4" />
-          <span>{dueDate}</span>
-        </div>
+
+      <CardFooter className="p-0 mt-4">
+        {/* footer intentionally left minimal; kept for spacing */}
       </CardFooter>
     </Card>
   );

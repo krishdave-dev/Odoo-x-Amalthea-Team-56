@@ -206,12 +206,14 @@ export class OrganizationService {
    * Get organization statistics
    */
   async getOrganizationStats(id: string) {
+    const orgId = parseInt(id, 10)
+    
     const [userStats, projectStats, financialStats] = await Promise.all([
       // User statistics
       prisma.user.groupBy({
         by: ['role'],
         where: {
-          organizationId: id,
+          organizationId: orgId,
           deletedAt: null,
         },
         _count: true,
@@ -221,7 +223,7 @@ export class OrganizationService {
       prisma.project.groupBy({
         by: ['status'],
         where: {
-          organizationId: id,
+          organizationId: orgId,
           deletedAt: null,
         },
         _count: true,
@@ -230,7 +232,7 @@ export class OrganizationService {
       // Financial aggregates
       prisma.project.aggregate({
         where: {
-          organizationId: id,
+          organizationId: orgId,
           deletedAt: null,
         },
         _sum: {

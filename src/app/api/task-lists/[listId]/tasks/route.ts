@@ -11,7 +11,7 @@ import {
   parseBody,
   parseQuery,
   taskQuerySchema,
-  uuidSchema,
+  idSchema,
 } from '@/lib/validation'
 import { prisma } from '@/lib/prisma'
 
@@ -25,7 +25,7 @@ export async function GET(
 ) {
   try {
     const { listId } = await params
-    uuidSchema.parse(listId)
+    idSchema.parse(listId)
 
     // Verify task list exists
     const taskList = await prisma.taskList.findUnique({
@@ -67,7 +67,7 @@ export async function POST(
 ) {
   try {
     const { listId } = await params
-    uuidSchema.parse(listId)
+    idSchema.parse(listId)
 
     // Get task list and verify it exists
     const taskList = await prisma.taskList.findUnique({

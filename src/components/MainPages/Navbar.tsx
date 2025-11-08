@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { FolderKanban, CheckSquare, Settings } from "lucide-react";
+import { FolderKanban, CheckSquare, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const navItems = [
   {
@@ -25,6 +32,7 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   return (
     <nav className="border-b bg-background">
@@ -63,9 +71,34 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <span className="text-sm font-semibold">U</span>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-80 transition-opacity">
+                  <span className="text-sm font-semibold">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="end">
+                <div className="space-y-3">
+                  <div className="border-b pb-3">
+                    <p className="font-medium">{user?.name || 'User'}</p>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Role: <span className="font-medium capitalize">{user?.role}</span>
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={logout} 
+                    variant="outline" 
+                    className="w-full justify-start"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>
