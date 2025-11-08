@@ -1,44 +1,44 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useState } from "react"
-import { format } from "date-fns"
-import { Calendar as CalendarIcon, Upload, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import * as React from "react";
+import { useState } from "react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon, Upload, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { MultiSelect } from "@/components/ui/multi-select"
-import { Breadcrumb } from "@/components/ui/breadcrumb"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/popover";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { cn } from "@/lib/utils";
 
 interface ProjectFormProps {
-  mode: "create" | "edit"
+  mode: "create" | "edit";
   initialData?: {
-    name?: string
-    tags?: string[]
-    manager?: string
-    deadline?: Date
-    priority?: "low" | "medium" | "high"
-    image?: string
-    description?: string
-  }
-  onSave?: (data: any) => void
-  onDiscard?: () => void
+    name?: string;
+    tags?: string[];
+    manager?: string;
+    deadline?: Date;
+    priority?: "low" | "medium" | "high";
+    image?: string;
+    description?: string;
+  };
+  onSave?: (data: any) => void;
+  onDiscard?: () => void;
 }
 
 // Mock data for dropdowns
@@ -51,7 +51,7 @@ const tagOptions = [
   { value: "backend", label: "Backend" },
   { value: "frontend", label: "Frontend" },
   { value: "database", label: "Database" },
-]
+];
 
 const managerOptions = [
   { value: "john", label: "John Doe" },
@@ -59,7 +59,7 @@ const managerOptions = [
   { value: "alice", label: "Alice Johnson" },
   { value: "bob", label: "Bob Smith" },
   { value: "emma", label: "Emma Davis" },
-]
+];
 
 export function ProjectForm({
   mode,
@@ -67,42 +67,44 @@ export function ProjectForm({
   onSave,
   onDiscard,
 }: ProjectFormProps) {
-  const [projectName, setProjectName] = useState(initialData?.name || "")
-  const [tags, setTags] = useState<string[]>(initialData?.tags || [])
-  const [manager, setManager] = useState(initialData?.manager || "")
+  const [projectName, setProjectName] = useState(initialData?.name || "");
+  const [tags, setTags] = useState<string[]>(initialData?.tags || []);
+  const [manager, setManager] = useState(initialData?.manager || "");
   const [deadline, setDeadline] = useState<Date | undefined>(
     initialData?.deadline
-  )
+  );
   const [priority, setPriority] = useState<"low" | "medium" | "high">(
     initialData?.priority || "medium"
-  )
-  const [image, setImage] = useState(initialData?.image || "")
-  const [description, setDescription] = useState(initialData?.description || "")
+  );
+  const [image, setImage] = useState(initialData?.image || "");
+  const [description, setDescription] = useState(
+    initialData?.description || ""
+  );
   const [imagePreview, setImagePreview] = useState<string | null>(
     initialData?.image || null
-  )
+  );
 
   const breadcrumbItems = [
     { label: "Projects", href: "/project" },
     { label: mode === "create" ? "Create Project" : "Edit Project" },
-  ]
+  ];
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string)
-        setImage(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+        setImagePreview(reader.result as string);
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleRemoveImage = () => {
-    setImagePreview(null)
-    setImage("")
-  }
+    setImagePreview(null);
+    setImage("");
+  };
 
   const handleSave = () => {
     const data = {
@@ -113,15 +115,15 @@ export function ProjectForm({
       priority,
       image,
       description,
-    }
-    onSave?.(data)
-    console.log("Saving project:", data)
-  }
+    };
+    onSave?.(data);
+    console.log("Saving project:", data);
+  };
 
   const handleDiscard = () => {
-    onDiscard?.()
+    onDiscard?.();
     // Reset form or navigate away
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background py-8">
@@ -133,7 +135,9 @@ export function ProjectForm({
             <Button variant="outline" onClick={handleDiscard} size="default">
               Discard
             </Button>
-            <Button onClick={handleSave} size="default">Save</Button>
+            <Button onClick={handleSave} size="default">
+              Save
+            </Button>
           </div>
         </div>
 
@@ -142,7 +146,7 @@ export function ProjectForm({
           <h2 className="text-2xl font-bold mb-8">
             {mode === "create" ? "Create New Project" : "Edit Project"}
           </h2>
-          
+
           <div className="space-y-8">
             {/* Project Name */}
             <div className="space-y-3">
@@ -251,7 +255,10 @@ export function ProjectForm({
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="high" id="high" />
-                    <Label htmlFor="high" className="font-normal cursor-pointer">
+                    <Label
+                      htmlFor="high"
+                      className="font-normal cursor-pointer"
+                    >
                       High
                     </Label>
                   </div>
@@ -316,7 +323,8 @@ export function ProjectForm({
                 className="resize-none"
               />
               <p className="text-xs text-muted-foreground">
-                Provide a detailed description of the project goals and requirements.
+                Provide a detailed description of the project goals and
+                requirements.
               </p>
             </div>
           </div>
@@ -333,5 +341,5 @@ export function ProjectForm({
         </div>
       </div>
     </div>
-  )
+  );
 }

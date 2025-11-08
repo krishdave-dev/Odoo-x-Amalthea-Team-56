@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { ChevronRight, Home } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import Link from "next/link";
+import { ChevronRight, Home } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface BreadcrumbProps {
   items: {
-    label: string
-    href?: string
-  }[]
+    label: string;
+    href?: string;
+  }[];
 }
 
 export function Breadcrumb({ items }: BreadcrumbProps) {
@@ -43,5 +43,5 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
         </React.Fragment>
       ))}
     </nav>
-  )
+  );
 }

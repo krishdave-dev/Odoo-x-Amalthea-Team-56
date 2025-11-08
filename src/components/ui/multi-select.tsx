@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { X } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface MultiSelectProps {
-  options: { value: string; label: string }[]
-  selected: string[]
-  onChange: (selected: string[]) => void
-  placeholder?: string
+  options: { value: string; label: string }[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  placeholder?: string;
 }
 
 export function MultiSelect({
@@ -24,19 +24,19 @@ export function MultiSelect({
   onChange,
   placeholder = "Select items...",
 }: MultiSelectProps) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false);
 
   const handleSelect = (value: string) => {
     if (selected.includes(value)) {
-      onChange(selected.filter((item) => item !== value))
+      onChange(selected.filter((item) => item !== value));
     } else {
-      onChange([...selected, value])
+      onChange([...selected, value]);
     }
-  }
+  };
 
   const handleRemove = (value: string) => {
-    onChange(selected.filter((item) => item !== value))
-  }
+    onChange(selected.filter((item) => item !== value));
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -50,15 +50,15 @@ export function MultiSelect({
           <div className="flex flex-wrap gap-1">
             {selected.length > 0 ? (
               selected.map((value) => {
-                const option = options.find((opt) => opt.value === value)
+                const option = options.find((opt) => opt.value === value);
                 return (
                   <Badge
                     key={value}
                     variant="secondary"
                     className="mr-1 mb-1"
                     onClick={(e) => {
-                      e.stopPropagation()
-                      handleRemove(value)
+                      e.stopPropagation();
+                      handleRemove(value);
                     }}
                   >
                     {option?.label}
@@ -66,23 +66,23 @@ export function MultiSelect({
                       className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          handleRemove(value)
+                          handleRemove(value);
                         }
                       }}
                       onMouseDown={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
+                        e.preventDefault();
+                        e.stopPropagation();
                       }}
                       onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        handleRemove(value)
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleRemove(value);
                       }}
                     >
                       <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                     </button>
                   </Badge>
-                )
+                );
               })
             ) : (
               <span className="text-muted-foreground">{placeholder}</span>
@@ -125,5 +125,5 @@ export function MultiSelect({
         </div>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

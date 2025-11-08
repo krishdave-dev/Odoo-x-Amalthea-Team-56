@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { ProjectForm } from "@/components/CRUDPages/create-edit-project/ProjectForm"
+import { ProjectForm } from "@/components/CRUDPages/create-edit-project/ProjectForm";
 
 // Mock initial data - will come from API later
 const mockProjectData = {
@@ -11,20 +11,20 @@ const mockProjectData = {
   priority: "high" as const,
   description:
     "Complete overhaul of company website with new branding and improved UX. This project includes redesigning all major pages, implementing responsive design, and improving overall user experience.",
-}
+};
 
 export function EditProjectPage() {
   const handleSave = (data: any) => {
-    console.log("Updating project with data:", data)
+    console.log("Updating project with data:", data);
     // Backend will handle this later
     // Navigate to projects page after save
-  }
+  };
 
   const handleDiscard = () => {
-    console.log("Discarding changes")
+    console.log("Discarding changes");
     // Navigate back to projects page
-    window.history.back()
-  }
+    window.history.back();
+  };
 
   return (
     <ProjectForm
@@ -33,5 +33,5 @@ export function EditProjectPage() {
       onSave={handleSave}
       onDiscard={handleDiscard}
     />
-  )
+  );
 }

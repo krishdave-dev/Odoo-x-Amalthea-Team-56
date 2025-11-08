@@ -1,5 +1,5 @@
-import { EditProjectPage } from "@/components/Pages/edit-project-page"
+import { EditProjectPage } from "@/components/Pages/edit-project-page";
 
 export default function Page() {
-  return <EditProjectPage />
+  return <EditProjectPage />;
 }
