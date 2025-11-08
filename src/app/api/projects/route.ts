@@ -78,9 +78,13 @@ export async function POST(req: Request) {
 
     const body = await parseBody(req, createProjectSchema)
 
-    // Only admins can assign project managers
+    // Only admins can assign project managers to other users
+    // Managers can only assign themselves
     if (body.projectManagerId && user.role !== 'admin') {
-      return errorResponse('Only admins can assign project managers', 403)
+      // If manager is trying to assign someone else, deny it
+      if (body.projectManagerId !== user.id) {
+        return errorResponse('Only admins can assign project managers to other users', 403)
+      }
     }
 
     // If manager creates project without specifying PM, they become the PM
