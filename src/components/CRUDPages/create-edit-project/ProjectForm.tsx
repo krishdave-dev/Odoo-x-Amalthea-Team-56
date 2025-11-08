@@ -249,12 +249,13 @@ export function ProjectForm({
       endDate: endDate?.toISOString(),
       status,
       budget: budget ? parseFloat(budget) : undefined,
+      version: 1, // For optimistic locking in edit mode
     };
 
     try {
       const url = mode === "create" 
         ? "/api/projects" 
-        : `/api/projects/${initialData?.id}`;
+        : `/api/projects/${initialData?.id}?organizationId=${user?.organizationId}`;
       
       const method = mode === "create" ? "POST" : "PUT";
 
@@ -276,6 +277,11 @@ export function ProjectForm({
         // If creating and team members selected, add them
         if (mode === "create" && teamMembers.length > 0 && data.data?.id) {
           await addTeamMembers(data.data.id);
+        }
+
+        // If editing and team members changed, update them
+        if (mode === "edit" && initialData?.id) {
+          await updateTeamMembers(initialData.id);
         }
 
         onSave?.(data.data);
@@ -313,6 +319,43 @@ export function ProjectForm({
       await Promise.all(promises);
     } catch (error) {
       console.error("Error adding team members:", error);
+      // Don't fail the whole operation, just log
+    }
+  };
+
+  const updateTeamMembers = async (projectId: number) => {
+    try {
+      // Get current members from initial data
+      const initialMembers = new Set(initialData?.teamMembers || []);
+      const currentMembers = new Set(teamMembers.map(id => parseInt(id)));
+
+      // Find members to add (in current but not in initial)
+      const toAdd = Array.from(currentMembers).filter(id => !initialMembers.has(id));
+      
+      // Find members to remove (in initial but not in current)
+      const toRemove = Array.from(initialMembers).filter(id => !currentMembers.has(id));
+
+      // Add new members
+      const addPromises = toAdd.map(userId =>
+        fetch(`/api/projects/${projectId}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ userId }),
+        })
+      );
+
+      // Remove members
+      const removePromises = toRemove.map(userId =>
+        fetch(`/api/projects/${projectId}/members/${userId}?organizationId=${user?.organizationId}`, {
+          method: "DELETE",
+          credentials: "include",
+        })
+      );
+
+      await Promise.all([...addPromises, ...removePromises]);
+    } catch (error) {
+      console.error("Error updating team members:", error);
       // Don't fail the whole operation, just log
     }
   };

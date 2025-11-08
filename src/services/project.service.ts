@@ -88,6 +88,15 @@ export class ProjectService {
               members: true,
             },
           },
+          tasks: {
+            where: {
+              status: { in: ['done', 'completed', 'closed'] },
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+            },
+          },
         },
         orderBy: { updatedAt: 'desc' },
       }),
