@@ -2,12 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import {
-  Briefcase,
-  AlertTriangle,
-  Clock,
-  DollarSign,
-} from "lucide-react";
+import { Briefcase, AlertTriangle, Clock, DollarSign } from "lucide-react";
 
 type Numberish = number | string;
 

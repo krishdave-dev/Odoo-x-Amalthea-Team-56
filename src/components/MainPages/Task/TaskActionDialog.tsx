@@ -43,7 +43,11 @@ interface TaskActionDialogProps {
   role: "team" | "manager" | "admin" | string; // simplistic role gate
 }
 
-export function TaskActionDialog({ task, onUpdate, role }: TaskActionDialogProps) {
+export function TaskActionDialog({
+  task,
+  onUpdate,
+  role,
+}: TaskActionDialogProps) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [hoursToLog, setHoursToLog] = useState<string>("");
@@ -74,7 +78,11 @@ export function TaskActionDialog({ task, onUpdate, role }: TaskActionDialogProps
     if (!isNaN(expense) && expense > 0) {
       updated.expenses = [
         ...updated.expenses,
-        { amount: expense, note: expenseNote || undefined, id: crypto.randomUUID() },
+        {
+          amount: expense,
+          note: expenseNote || undefined,
+          id: crypto.randomUUID(),
+        },
       ];
     }
 
@@ -100,7 +108,10 @@ export function TaskActionDialog({ task, onUpdate, role }: TaskActionDialogProps
         <div className="space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium">Status</label>
-            <Select value={status} onValueChange={(v: TaskStatus) => setStatus(v)}>
+            <Select
+              value={status}
+              onValueChange={(v: TaskStatus) => setStatus(v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -130,23 +141,23 @@ export function TaskActionDialog({ task, onUpdate, role }: TaskActionDialogProps
             />
           </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Submit Expense</label>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                placeholder="Amount"
-                value={expenseAmount}
-                onChange={(e) => setExpenseAmount(e.target.value)}
-              />
-              <Textarea
-                placeholder="Expense note (optional)"
-                value={expenseNote}
-                onChange={(e) => setExpenseNote(e.target.value)}
-                className="min-h-[60px]"
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Submit Expense</label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              placeholder="Amount"
+              value={expenseAmount}
+              onChange={(e) => setExpenseAmount(e.target.value)}
+            />
+            <Textarea
+              placeholder="Expense note (optional)"
+              value={expenseNote}
+              onChange={(e) => setExpenseNote(e.target.value)}
+              className="min-h-[60px]"
+            />
+          </div>
 
           <div className="grid grid-cols-2 gap-4 pt-2 text-sm">
             <div className="space-y-1">
@@ -168,7 +179,9 @@ export function TaskActionDialog({ task, onUpdate, role }: TaskActionDialogProps
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
           <Button onClick={handleApply}>Apply</Button>
         </DialogFooter>
       </DialogContent>
