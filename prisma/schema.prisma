@@ -280,17 +280,25 @@ model Expense {
   userId          Int?      @map("user_id")
   amount          Decimal   @db.Decimal(12, 2)
   billable        Boolean   @default(false)
-  status          String    @default("submitted")
+  status          String    @default("draft") // 'draft', 'submitted', 'approved', 'rejected', 'paid'
   receiptUrl      String?   @map("receipt_url")
   note            String?
+  rejectionReason String?   @map("rejection_reason")
+  approvedBy      Int?      @map("approved_by")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  submittedAt     DateTime? @map("submitted_at") @db.Timestamptz(6)
   approvedAt      DateTime? @map("approved_at") @db.Timestamptz(6)
+  paidAt          DateTime? @map("paid_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   project         Project?     @relation(fields: [projectId], references: [id])
   user            User?        @relation(fields: [userId], references: [id])
 
   @@index([projectId, status], map: "ix_expenses_proj_status")
+  @@index([organizationId, status], map: "ix_expenses_org_status")
+  @@index([userId, status], map: "ix_expenses_user_status")
   @@map("expenses")
 }
 
@@ -320,10 +328,10 @@ model Attachment {
 
 // Outbox Pattern for Eventual Consistency
 model OutboxEvent {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("event_id")
+  id          Int       @id @default(autoincrement()) @map("event_id")
   eventType   String    @map("event_type") // 'UPLOAD_SUCCESS', 'DELETE_FILE', 'VERIFY_UPLOAD', 'REPAIR_UPLOAD'
   entityType  String    @map("entity_type") // 'Attachment'
-  entityId    String    @db.Uuid @map("entity_id")
+  entityId    Int       @map("entity_id")
   payload     Json      // Contains Cloudinary data, retry count, etc.
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   processed   Boolean   @default(false)

@@ -49,9 +49,9 @@ export async function softDelete(model: any, id: string): Promise<boolean> {
  * Create audit event helper
  */
 export async function createAuditEvent(
-  organizationId: string,
+  organizationId: number,
   entityType: string,
-  entityId: string | null,
+  entityId: number | null,
   eventType: string,
   payload?: any
 ) {

@@ -183,6 +183,41 @@ export const taskQuerySchema = paginationSchema.extend({
   priority: taskPrioritySchema.optional(),
 })
 
+// Expense schemas
+export const expenseStatusEnum = z.enum(['draft', 'submitted', 'approved', 'rejected', 'paid'])
+
+export const createExpenseSchema = z.object({
+  organizationId: idSchema,
+  projectId: idSchema.optional(),
+  userId: idSchema.optional(),
+  amount: z.coerce.number().positive(),
+  billable: z.boolean().default(false),
+  note: z.string().max(1000).optional(),
+  receiptUrl: z.string().url().optional(),
+})
+
+export const updateExpenseSchema = z.object({
+  amount: z.coerce.number().positive().optional(),
+  billable: z.boolean().optional(),
+  note: z.string().max(1000).optional(),
+  receiptUrl: z.string().url().optional(),
+})
+
+export const expenseWorkflowSchema = z.object({
+  reason: z.string().max(500).optional(),
+})
+
+export const expenseQuerySchema = paginationSchema.extend({
+  status: expenseStatusEnum.optional(),
+  userId: idSchema.optional(),
+  projectId: idSchema.optional(),
+  billable: z.coerce.boolean().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+  minAmount: z.coerce.number().optional(),
+  maxAmount: z.coerce.number().optional(),
+})
+
 /**
  * Helper to parse and validate request body
  */
