@@ -12,6 +12,9 @@
 import { prisma } from '@/lib/prisma'
 
 export type NotificationType =
+  | 'INVITATION_RECEIVED'
+  | 'INVITATION_ACCEPTED'
+  | 'INVITATION_REJECTED'
   | 'TASK_ASSIGNED'
   | 'TASK_COMPLETED'
   | 'TASK_COMMENT'
@@ -358,6 +361,76 @@ export class NotificationService {
       data: {
         reportType,
         downloadUrl,
+      },
+    })
+  }
+
+  /**
+   * Helper: Notify user about organization invitation
+   */
+  static async notifyInvitationReceived(
+    orgId: number,
+    userId: number,
+    invitationId: number,
+    organizationName: string,
+    role: string,
+    invitedBy: string
+  ) {
+    await this.createNotification({
+      orgId,
+      userId,
+      type: 'INVITATION_RECEIVED',
+      title: 'Organization Invitation',
+      message: `${invitedBy} has invited you to join ${organizationName} as ${role}`,
+      data: {
+        invitationId,
+        organizationName,
+        role,
+        invitedBy,
+      },
+    })
+  }
+
+  /**
+   * Helper: Notify admin/manager when invitation is accepted
+   */
+  static async notifyInvitationAccepted(
+    orgId: number,
+    adminUserId: number,
+    userName: string,
+    role: string
+  ) {
+    await this.createNotification({
+      orgId,
+      userId: adminUserId,
+      type: 'INVITATION_ACCEPTED',
+      title: 'Invitation Accepted',
+      message: `${userName} has accepted the invitation and joined as ${role}`,
+      data: {
+        userName,
+        role,
+      },
+    })
+  }
+
+  /**
+   * Helper: Notify admin/manager when invitation is rejected
+   */
+  static async notifyInvitationRejected(
+    orgId: number,
+    adminUserId: number,
+    userName: string,
+    role: string
+  ) {
+    await this.createNotification({
+      orgId,
+      userId: adminUserId,
+      type: 'INVITATION_REJECTED',
+      title: 'Invitation Rejected',
+      message: `${userName} has declined the invitation to join as ${role}`,
+      data: {
+        userName,
+        role,
       },
     })
   }

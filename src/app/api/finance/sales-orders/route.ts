@@ -1,15 +1,23 @@
 import { NextRequest } from 'next/server'
 import { salesOrderService } from '@/services/sales-order.service'
-import { successResponse, paginatedResponse } from '@/lib/response'
+import { getCurrentUser } from '@/lib/session'
+import { canManageFinanceDocuments } from '@/lib/permissions'
+import { successResponse, paginatedResponse, errorResponse } from '@/lib/response'
 import { handleError } from '@/lib/error'
 import { createSalesOrderSchema, salesOrderQuerySchema, idSchema } from '@/lib/validation'
 
 /**
  * GET /api/finance/sales-orders
  * List sales orders with filters
+ * Requires: canManageFinance or canViewAllProjects permission
  */
 export async function GET(req: NextRequest) {
   try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return errorResponse('Authentication required', 401)
+    }
+
     const { searchParams } = new URL(req.url)
     
     const query = salesOrderQuerySchema.parse({
@@ -23,6 +31,11 @@ export async function GET(req: NextRequest) {
     })
 
     const organizationId = idSchema.parse(searchParams.get('organizationId'))
+
+    // Verify organization access
+    if (organizationId !== user.organizationId) {
+      return errorResponse('Access denied to this organization', 403)
+    }
 
     const filters = {
       status: query.status,
@@ -43,11 +56,27 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/finance/sales-orders
  * Create new sales order
+ * Requires: canManageFinance permission (admin, manager, or finance role)
  */
 export async function POST(req: NextRequest) {
   try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return errorResponse('Authentication required', 401)
+    }
+
+    // Check permission
+    if (!canManageFinanceDocuments(user.role)) {
+      return errorResponse('Insufficient permissions to create sales orders', 403)
+    }
+
     const body = await req.json()
     const data = createSalesOrderSchema.parse(body)
+
+    // Ensure sales order is in user's organization
+    if (data.organizationId !== user.organizationId) {
+      return errorResponse('Cannot create sales order in another organization', 403)
+    }
 
     const result = await salesOrderService.create(data)
 

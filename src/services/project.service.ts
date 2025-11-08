@@ -42,6 +42,7 @@ export class ProjectService {
       status?: string
       projectManagerId?: string
       search?: string
+      userId?: number  // For filtering by member assignment
     }
   ): Promise<PaginatedResponse<Project>> {
     const skip = (page - 1) * pageSize
@@ -53,6 +54,12 @@ export class ProjectService {
       deletedAt: null,
       ...(filters?.status && { status: filters.status }),
       ...(filters?.projectManagerId && { projectManagerId: parseInt(filters.projectManagerId, 10) }),
+      ...(filters?.userId && {
+        OR: [
+          { projectManagerId: filters.userId },
+          { members: { some: { userId: filters.userId } } },
+        ],
+      }),
       ...(filters?.search && {
         OR: [
           { name: { contains: filters.search, mode: 'insensitive' } },
