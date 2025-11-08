@@ -85,3 +85,15 @@ export const ATTACHMENT_OWNER_TYPES = {
 } as const
 
 export type AttachmentOwnerType = typeof ATTACHMENT_OWNER_TYPES[keyof typeof ATTACHMENT_OWNER_TYPES]
+
+/**
+ * Timesheet status
+ */
+export const TIMESHEET_STATUSES = {
+  DRAFT: 'draft',
+  SUBMITTED: 'submitted',
+  APPROVED: 'approved',
+  LOCKED: 'locked',
+} as const
+
+export type TimesheetStatus = typeof TIMESHEET_STATUSES[keyof typeof TIMESHEET_STATUSES]
