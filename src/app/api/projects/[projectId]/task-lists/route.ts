@@ -6,7 +6,7 @@ import {
   notFoundResponse,
 } from '@/lib/response'
 import { handleError, NotFoundError } from '@/lib/error'
-import { createTaskListSchema, parseBody, uuidSchema } from '@/lib/validation'
+import { createTaskListSchema, parseBody, idSchema } from '@/lib/validation'
 import { prisma } from '@/lib/prisma'
 
 /**
@@ -19,7 +19,7 @@ export async function GET(
 ) {
   try {
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    idSchema.parse(projectId)
 
     // Verify project exists
     const project = await prisma.project.findUnique({
@@ -48,7 +48,7 @@ export async function POST(
 ) {
   try {
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    idSchema.parse(projectId)
 
     const body = await parseBody(req, createTaskListSchema)
 
@@ -76,7 +76,7 @@ export async function PUT(
 ) {
   try {
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    idSchema.parse(projectId)
 
     const body = await req.json()
     const orderedListIds = body.orderedListIds as string[]

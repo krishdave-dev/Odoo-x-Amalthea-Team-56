@@ -7,7 +7,7 @@ import {
   errorResponse,
 } from '@/lib/response'
 import { handleError } from '@/lib/error'
-import { updateTaskSchema, parseBody, uuidSchema } from '@/lib/validation'
+import { updateTaskSchema, parseBody, idSchema } from '@/lib/validation'
 
 /**
  * GET /api/tasks/:taskId
@@ -19,7 +19,7 @@ export async function GET(
 ) {
   try {
     const { taskId } = await params
-    uuidSchema.parse(taskId)
+    idSchema.parse(taskId)
 
     const task = await taskService.getTaskById(taskId)
 
@@ -43,7 +43,7 @@ export async function PUT(
 ) {
   try {
     const { taskId } = await params
-    uuidSchema.parse(taskId)
+    idSchema.parse(taskId)
 
     const body = await parseBody(req, updateTaskSchema)
 
@@ -70,7 +70,7 @@ export async function DELETE(
 ) {
   try {
     const { taskId } = await params
-    uuidSchema.parse(taskId)
+    idSchema.parse(taskId)
 
     const success = await taskService.deleteTask(taskId)
 

@@ -3,18 +3,16 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  extensions = [uuidOssp(map: "uuid-ossp")]
 }
 
 // Organizations / Tenants
 model Organization {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("organization_id")
+  id              Int      @id @default(autoincrement()) @map("organization_id")
   name            String
   currency        String   @default("INR") @db.Char(3)
   timezone        String   @default("Asia/Kolkata")
@@ -36,8 +34,8 @@ model Organization {
 
 // Users (auth + profile)
 model User {
-  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("user_id")
-  organizationId  String    @db.Uuid @map("organization_id")
+  id              Int       @id @default(autoincrement()) @map("user_id")
+  organizationId  Int       @map("organization_id")
   email           String
   name            String?
   passwordHash    String?   @map("password_hash")
@@ -64,12 +62,12 @@ model User {
 
 // Projects
 model Project {
-  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("project_id")
-  organizationId      String    @db.Uuid @map("organization_id")
+  id                  Int       @id @default(autoincrement()) @map("project_id")
+  organizationId      Int       @map("organization_id")
   name                String
   code                String?
   description         String?
-  projectManagerId    String?   @db.Uuid @map("project_manager_id")
+  projectManagerId    Int?      @map("project_manager_id")
   startDate           DateTime? @map("start_date") @db.Date
   endDate             DateTime? @map("end_date") @db.Date
   status              String    @default("planned")
@@ -104,9 +102,9 @@ model Project {
 
 // Project Members (many-to-many)
 model ProjectMember {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId       String   @db.Uuid @map("project_id")
-  userId          String   @db.Uuid @map("user_id")
+  id              Int      @id @default(autoincrement())
+  projectId       Int      @map("project_id")
+  userId          Int      @map("user_id")
   roleInProject   String?  @map("role_in_project")
   assignedAt      DateTime @default(now()) @map("assigned_at") @db.Timestamptz(6)
 
@@ -119,8 +117,8 @@ model ProjectMember {
 
 // Task Lists / Milestones
 model TaskList {
-  id          String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("list_id")
-  projectId   String @db.Uuid @map("project_id")
+  id          Int    @id @default(autoincrement()) @map("list_id")
+  projectId   Int    @map("project_id")
   title       String
   ordinal     Int    @default(0)
 
@@ -132,12 +130,12 @@ model TaskList {
 
 // Tasks
 model Task {
-  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("task_id")
-  projectId       String    @db.Uuid @map("project_id")
-  listId          String?   @db.Uuid @map("list_id")
+  id              Int       @id @default(autoincrement()) @map("task_id")
+  projectId       Int       @map("project_id")
+  listId          Int?      @map("list_id")
   title           String
   description     String?
-  assigneeId      String?   @db.Uuid @map("assignee_id")
+  assigneeId      Int?      @map("assignee_id")
   priority        Int       @default(2) @db.SmallInt
   status          String    @default("new")
   estimateHours   Decimal?  @map("estimate_hours") @db.Decimal(8, 2)
@@ -163,10 +161,10 @@ model Task {
 
 // Timesheets (heavy-write table, consider partitioning)
 model Timesheet {
-  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("timesheet_id")
-  projectId       String    @db.Uuid @map("project_id")
-  taskId          String?   @db.Uuid @map("task_id")
-  userId          String    @db.Uuid @map("user_id")
+  id              Int       @id @default(autoincrement()) @map("timesheet_id")
+  projectId       Int       @map("project_id")
+  taskId          Int?      @map("task_id")
+  userId          Int       @map("user_id")
   start           DateTime  @map("start") @db.Timestamptz(6)
   end             DateTime  @map("end") @db.Timestamptz(6)
   durationHours   Decimal   @map("duration_hours") @db.Decimal(8, 2)
@@ -191,9 +189,9 @@ model Timesheet {
 
 // Sales Orders
 model SalesOrder {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("so_id")
-  organizationId  String   @db.Uuid @map("organization_id")
-  projectId       String?  @db.Uuid @map("project_id")
+  id              Int      @id @default(autoincrement()) @map("so_id")
+  organizationId  Int      @map("organization_id")
+  projectId       Int?     @map("project_id")
   soNumber        String   @map("so_number")
   partnerName     String?  @map("partner_name")
   orderDate       DateTime @default(dbgenerated("current_date")) @map("order_date") @db.Date
@@ -213,9 +211,9 @@ model SalesOrder {
 
 // Purchase Orders
 model PurchaseOrder {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("po_id")
-  organizationId  String   @db.Uuid @map("organization_id")
-  projectId       String?  @db.Uuid @map("project_id")
+  id              Int      @id @default(autoincrement()) @map("po_id")
+  organizationId  Int      @map("organization_id")
+  projectId       Int?     @map("project_id")
   poNumber        String   @map("po_number")
   vendorName      String?  @map("vendor_name")
   orderDate       DateTime @default(dbgenerated("current_date")) @map("order_date") @db.Date
@@ -235,10 +233,10 @@ model PurchaseOrder {
 
 // Customer Invoices
 model CustomerInvoice {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("invoice_id")
-  organizationId  String   @db.Uuid @map("organization_id")
-  projectId       String?  @db.Uuid @map("project_id")
-  soId            String?  @db.Uuid @map("so_id")
+  id              Int      @id @default(autoincrement()) @map("invoice_id")
+  organizationId  Int      @map("organization_id")
+  projectId       Int?     @map("project_id")
+  soId            Int?     @map("so_id")
   invoiceNumber   String   @map("invoice_number")
   invoiceDate     DateTime @default(dbgenerated("current_date")) @map("invoice_date") @db.Date
   amount          Decimal  @db.Decimal(14, 2)
@@ -256,10 +254,10 @@ model CustomerInvoice {
 
 // Vendor Bills
 model VendorBill {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("bill_id")
-  organizationId  String   @db.Uuid @map("organization_id")
-  projectId       String?  @db.Uuid @map("project_id")
-  poId            String?  @db.Uuid @map("po_id")
+  id              Int      @id @default(autoincrement()) @map("bill_id")
+  organizationId  Int      @map("organization_id")
+  projectId       Int?     @map("project_id")
+  poId            Int?     @map("po_id")
   vendorName      String?  @map("vendor_name")
   billDate        DateTime @default(dbgenerated("current_date")) @map("bill_date") @db.Date
   amount          Decimal  @db.Decimal(14, 2)
@@ -276,10 +274,10 @@ model VendorBill {
 
 // Expenses (employee)
 model Expense {
-  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("expense_id")
-  organizationId  String    @db.Uuid @map("organization_id")
-  projectId       String?   @db.Uuid @map("project_id")
-  userId          String?   @db.Uuid @map("user_id")
+  id              Int       @id @default(autoincrement()) @map("expense_id")
+  organizationId  Int       @map("organization_id")
+  projectId       Int?      @map("project_id")
+  userId          Int?      @map("user_id")
   amount          Decimal   @db.Decimal(12, 2)
   billable        Boolean   @default(false)
   status          String    @default("submitted")
@@ -298,13 +296,13 @@ model Expense {
 
 // Attachments
 model Attachment {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("attachment_id")
-  organizationId  String   @db.Uuid @map("organization_id")
+  id              Int      @id @default(autoincrement()) @map("attachment_id")
+  organizationId  Int      @map("organization_id")
   ownerType       String   @map("owner_type")
-  ownerId         String   @db.Uuid @map("owner_id")
+  ownerId         Int      @map("owner_id")
   fileUrl         String   @map("file_url")
   fileName        String?  @map("file_name")
-  uploadedBy      String?  @db.Uuid @map("uploaded_by")
+  uploadedBy      Int?     @map("uploaded_by")
   uploadedAt      DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -316,9 +314,9 @@ model Attachment {
 
 // Task Comments
 model TaskComment {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("comment_id")
-  taskId      String   @db.Uuid @map("task_id")
-  userId      String   @db.Uuid @map("user_id")
+  id          Int      @id @default(autoincrement()) @map("comment_id")
+  taskId      Int      @map("task_id")
+  userId      Int      @map("user_id")
   content     String
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
@@ -330,10 +328,10 @@ model TaskComment {
 
 // Events / Audit Log (append-only)
 model Event {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid @map("event_id")
-  organizationId  String   @db.Uuid @map("organization_id")
+  id              Int      @id @default(autoincrement()) @map("event_id")
+  organizationId  Int      @map("organization_id")
   entityType      String   @map("entity_type")
-  entityId        String?  @db.Uuid @map("entity_id")
+  entityId        Int?     @map("entity_id")
   eventType       String   @map("event_type")
   payload         Json?    @db.JsonB
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
