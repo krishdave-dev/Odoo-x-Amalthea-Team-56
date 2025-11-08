@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { TaskCard } from "@/components/MainPages/Task/TaskCard";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutGrid, List, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 // Mock data - will be replaced with API calls later
 const mockTasks = {
@@ -112,8 +118,12 @@ export function TaskPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
-  
-  const allTasks = [...mockTasks.new, ...mockTasks.inProgress, ...mockTasks.completed];
+
+  const allTasks = [
+    ...mockTasks.new,
+    ...mockTasks.inProgress,
+    ...mockTasks.completed,
+  ];
   const totalPages = Math.ceil(allTasks.length / itemsPerPage);
 
   const PaginationControls = () => (
@@ -193,109 +203,124 @@ export function TaskPage() {
       {/* Kanban or List View */}
       {view === "kanban" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* New Column */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold">
-                {mockTasks.new.length}
-              </span>
-              New
-            </h2>
+          {/* New Column */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold">
+                  {mockTasks.new.length}
+                </span>
+                New
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {mockTasks.new.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  title={task.title}
+                  description={task.description}
+                  priority={task.priority}
+                  assignedTo={task.assignedTo}
+                  dueDate={task.dueDate}
+                  projectName={task.projectName}
+                />
+              ))}
+            </div>
           </div>
-          <div className="space-y-3">
-            {mockTasks.new.map((task) => (
-              <TaskCard
-                key={task.id}
-                title={task.title}
-                description={task.description}
-                priority={task.priority}
-                assignedTo={task.assignedTo}
-                dueDate={task.dueDate}
-                projectName={task.projectName}
-              />
-            ))}
-          </div>
-        </div>
 
-        {/* In Progress Column */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                {mockTasks.inProgress.length}
-              </span>
-              In Progress
-            </h2>
+          {/* In Progress Column */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+                  {mockTasks.inProgress.length}
+                </span>
+                In Progress
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {mockTasks.inProgress.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  title={task.title}
+                  description={task.description}
+                  priority={task.priority}
+                  assignedTo={task.assignedTo}
+                  dueDate={task.dueDate}
+                  projectName={task.projectName}
+                />
+              ))}
+            </div>
           </div>
-          <div className="space-y-3">
-            {mockTasks.inProgress.map((task) => (
-              <TaskCard
-                key={task.id}
-                title={task.title}
-                description={task.description}
-                priority={task.priority}
-                assignedTo={task.assignedTo}
-                dueDate={task.dueDate}
-                projectName={task.projectName}
-              />
-            ))}
-          </div>
-        </div>
 
-        {/* Completed Column */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
-                {mockTasks.completed.length}
-              </span>
-              Completed
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {mockTasks.completed.map((task) => (
-              <TaskCard
-                key={task.id}
-                title={task.title}
-                description={task.description}
-                priority={task.priority}
-                assignedTo={task.assignedTo}
-                dueDate={task.dueDate}
-                projectName={task.projectName}
-              />
-            ))}
+          {/* Completed Column */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
+                  {mockTasks.completed.length}
+                </span>
+                Completed
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {mockTasks.completed.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  title={task.title}
+                  description={task.description}
+                  priority={task.priority}
+                  assignedTo={task.assignedTo}
+                  dueDate={task.dueDate}
+                  projectName={task.projectName}
+                />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
       ) : (
         <div className="space-y-3">
           {allTasks
             .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
             .map((task) => (
-              <div key={task.id} className="rounded-lg border p-4 hover:bg-accent/50 transition-colors cursor-pointer">
+              <div
+                key={task.id}
+                className="rounded-lg border p-4 hover:bg-accent/50 transition-colors cursor-pointer"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold">{task.title}</h3>
-                      <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${
-                        task.priority === "high" ? "bg-red-500/10 text-red-700 border-red-500/20" :
-                        task.priority === "medium" ? "bg-yellow-500/10 text-yellow-700 border-yellow-500/20" :
-                        "bg-blue-500/10 text-blue-700 border-blue-500/20"
-                      }`}>
+                      <span
+                        className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${
+                          task.priority === "high"
+                            ? "bg-red-500/10 text-red-700 border-red-500/20"
+                            : task.priority === "medium"
+                            ? "bg-yellow-500/10 text-yellow-700 border-yellow-500/20"
+                            : "bg-blue-500/10 text-blue-700 border-blue-500/20"
+                        }`}
+                      >
                         {task.priority}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-                    <p className="text-xs text-muted-foreground mt-2">📁 {task.projectName}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {task.description}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      📁 {task.projectName}
+                    </p>
                   </div>
                   <div className="flex items-center gap-6 text-sm text-muted-foreground">
                     <div className="text-center min-w-24">
-                      <div className="font-semibold text-foreground">{task.assignedTo}</div>
+                      <div className="font-semibold text-foreground">
+                        {task.assignedTo}
+                      </div>
                       <div className="text-xs">Assigned To</div>
                     </div>
                     <div className="text-center min-w-24">
-                      <div className="font-semibold text-foreground">{task.dueDate}</div>
+                      <div className="font-semibold text-foreground">
+                        {task.dueDate}
+                      </div>
                       <div className="text-xs">Due Date</div>
                     </div>
                   </div>
