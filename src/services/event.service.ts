@@ -338,6 +338,203 @@ export class EventService {
       take: limit,
     })
   }
+
+  /**
+   * Get events with pagination (for admin dashboard)
+   */
+  async getEventsPaginated(
+    organizationId: number,
+    filters?: {
+      entityType?: string
+      entityId?: number
+      eventType?: string
+      fromDate?: Date
+      toDate?: Date
+      userId?: number
+      page?: number
+      pageSize?: number
+    }
+  ) {
+    const page = filters?.page || 1
+    const pageSize = filters?.pageSize || 50
+
+    const where: any = { organizationId }
+
+    if (filters?.entityType) where.entityType = filters.entityType
+    if (filters?.entityId !== undefined) where.entityId = filters.entityId
+    if (filters?.eventType) where.eventType = filters.eventType
+
+    if (filters?.fromDate || filters?.toDate) {
+      where.createdAt = {}
+      if (filters.fromDate) where.createdAt.gte = filters.fromDate
+      if (filters.toDate) where.createdAt.lte = filters.toDate
+    }
+
+    // Filter by userId in payload (JSON path query)
+    if (filters?.userId !== undefined) {
+      where.payload = {
+        path: ['userId'],
+        equals: filters.userId,
+      }
+    }
+
+    const [total, events] = await Promise.all([
+      prisma.event.count({ where }),
+      prisma.event.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ])
+
+    return {
+      events,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    }
+  }
+
+  /**
+   * Get single event by ID
+   */
+  async getEventById(eventId: number, organizationId: number) {
+    return prisma.event.findFirst({
+      where: {
+        id: eventId,
+        organizationId,
+      },
+    })
+  }
+
+  /**
+   * Get event summary for admin dashboard
+   */
+  async getEventSummary(organizationId: number) {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const weekAgo = new Date(today)
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const monthAgo = new Date(today)
+    monthAgo.setMonth(monthAgo.getMonth() - 1)
+
+    const [
+      totalEvents,
+      eventsToday,
+      eventsThisWeek,
+      eventsThisMonth,
+      entityGroups,
+      eventTypeGroups,
+    ] = await Promise.all([
+      prisma.event.count({ where: { organizationId } }),
+      prisma.event.count({ where: { organizationId, createdAt: { gte: today } } }),
+      prisma.event.count({ where: { organizationId, createdAt: { gte: weekAgo } } }),
+      prisma.event.count({ where: { organizationId, createdAt: { gte: monthAgo } } }),
+      prisma.event.groupBy({
+        by: ['entityType'],
+        where: { organizationId },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+      prisma.event.groupBy({
+        by: ['eventType'],
+        where: { organizationId },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+    ])
+
+    // Activity trend (last 14 days)
+    const twoWeeksAgo = new Date(today)
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+
+    const recentEvents = await prisma.event.findMany({
+      where: {
+        organizationId,
+        createdAt: { gte: twoWeeksAgo },
+      },
+      select: { createdAt: true },
+    })
+
+    // Group by date
+    const dailyCounts = new Map<string, number>()
+    recentEvents.forEach(e => {
+      const date = e.createdAt.toISOString().substring(0, 10)
+      dailyCounts.set(date, (dailyCounts.get(date) || 0) + 1)
+    })
+
+    const trend = Array.from(dailyCounts.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+
+    return {
+      summary: {
+        totalEvents,
+        eventsToday,
+        eventsThisWeek,
+        eventsThisMonth,
+      },
+      topEntities: entityGroups.map(g => ({
+        entityType: g.entityType,
+        count: g._count.id,
+      })),
+      topEventTypes: eventTypeGroups.map(g => ({
+        eventType: g.eventType,
+        count: g._count.id,
+      })),
+      trend,
+    }
+  }
+
+  /**
+   * Get events for export (capped at 10k records)
+   */
+  async getEventsForExport(
+    organizationId: number,
+    filters?: {
+      entityType?: string
+      entityId?: number
+      eventType?: string
+      fromDate?: Date
+      toDate?: Date
+    }
+  ) {
+    const where: any = { organizationId }
+
+    if (filters?.entityType) where.entityType = filters.entityType
+    if (filters?.entityId !== undefined) where.entityId = filters.entityId
+    if (filters?.eventType) where.eventType = filters.eventType
+
+    if (filters?.fromDate || filters?.toDate) {
+      where.createdAt = {}
+      if (filters.fromDate) where.createdAt.gte = filters.fromDate
+      if (filters.toDate) where.createdAt.lte = filters.toDate
+    }
+
+    // Limit to 10,000 records to prevent OOM
+    return prisma.event.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 10000,
+    })
+  }
+
+  /**
+   * Delete old events (for cleanup jobs)
+   */
+  async deleteOldEvents(organizationId: number, olderThan: Date) {
+    const result = await prisma.event.deleteMany({
+      where: {
+        organizationId,
+        createdAt: { lt: olderThan },
+      },
+    })
+    return result.count
+  }
 }
 
 // Export singleton instance

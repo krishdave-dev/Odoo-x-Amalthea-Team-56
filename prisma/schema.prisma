@@ -28,6 +28,7 @@ model Organization {
   expenses        Expense[]
   attachments     Attachment[]
   events          Event[]
+  notifications   Notification[]
 
   @@map("organizations")
 }
@@ -55,6 +56,7 @@ model User {
   expenses        Expense[]
   uploadedAttachments Attachment[]
   taskComments    TaskComment[]
+  notifications   Notification[]
 
   @@unique([organizationId, email], map: "ux_users_org_email")
   @@map("users")
@@ -387,4 +389,40 @@ model Event {
   organization    Organization @relation(fields: [organizationId], references: [id])
 
   @@map("events")
+}
+
+// Analytics Cache for Performance Optimization
+model AnalyticsCache {
+  id              Int       @id @default(autoincrement()) @map("cache_id")
+  organizationId  Int       @map("organization_id")
+  cacheType       String    @map("cache_type") // 'project_summary', 'finance_summary', 'timesheet_summary', etc.
+  data            Json      @db.JsonB // Cached analytics result
+  computedAt      DateTime  @default(now()) @map("computed_at") @db.Timestamptz(6)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(6)
+  computeDurationMs Int?    @map("compute_duration_ms") // Track query performance
+  
+  @@unique([organizationId, cacheType], map: "ux_analytics_org_type")
+  @@index([organizationId, cacheType, expiresAt], map: "ix_analytics_lookup")
+  @@index([expiresAt], map: "ix_analytics_expires")
+  @@map("analytics_cache")
+}
+
+// Notifications for In-App and Email Alerts
+model Notification {
+  id              Int       @id @default(autoincrement()) @map("notification_id")
+  organizationId  Int       @map("organization_id")
+  userId          Int?      @map("user_id")
+  type            String    // e.g., "TASK_ASSIGNED", "INVOICE_GENERATED", "EXPENSE_APPROVED"
+  title           String
+  message         String
+  data            Json?     @db.JsonB // Additional context (entityId, links, etc.)
+  isRead          Boolean   @default(false) @map("is_read")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId, isRead], map: "ix_notifications_user_status")
+  @@index([userId, createdAt], map: "ix_notifications_user_date")
+  @@map("notifications")
 }
