@@ -7,7 +7,7 @@ import {
   noContentResponse,
 } from '@/lib/response'
 import { handleError } from '@/lib/error'
-import { updateOrganizationSchema, parseBody, uuidSchema } from '@/lib/validation'
+import { updateOrganizationSchema, parseBody, idSchema } from '@/lib/validation'
 import { z } from 'zod'
 
 /**
@@ -20,7 +20,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    uuidSchema.parse(id)
+    idSchema.parse(id)
 
     const { searchParams } = new URL(req.url)
     const includeProjects = searchParams.get('includeProjects') === 'true'
@@ -50,7 +50,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    uuidSchema.parse(id)
+    idSchema.parse(id)
 
     const body = await parseBody(req, updateOrganizationSchema)
 
@@ -76,7 +76,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    uuidSchema.parse(id)
+    idSchema.parse(id)
 
     const success = await organizationService.deleteOrganization(id)
 

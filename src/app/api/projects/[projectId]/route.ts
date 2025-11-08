@@ -7,7 +7,7 @@ import {
   errorResponse,
 } from '@/lib/response'
 import { handleError } from '@/lib/error'
-import { updateProjectSchema, parseBody, uuidSchema } from '@/lib/validation'
+import { updateProjectSchema, parseBody, idSchema } from '@/lib/validation'
 
 /**
  * GET /api/projects/:projectId
@@ -19,7 +19,7 @@ export async function GET(
 ) {
   try {
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    idSchema.parse(projectId)
 
     const { searchParams } = new URL(req.url)
     const organizationId = searchParams.get('organizationId')
@@ -52,7 +52,7 @@ export async function PUT(
 ) {
   try {
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    idSchema.parse(projectId)
 
     const { searchParams } = new URL(req.url)
     const organizationId = searchParams.get('organizationId')
@@ -93,7 +93,7 @@ export async function DELETE(
 ) {
   try {
     const { projectId } = await params
-    uuidSchema.parse(projectId)
+    idSchema.parse(projectId)
 
     const { searchParams } = new URL(req.url)
     const organizationId = searchParams.get('organizationId')

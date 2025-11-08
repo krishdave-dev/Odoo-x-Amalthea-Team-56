@@ -9,9 +9,8 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email)
 }
 
-export function validateUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-  return uuidRegex.test(uuid)
+export function validatePositiveInteger(value: number): boolean {
+  return Number.isInteger(value) && value > 0
 }
 
 export function validateCurrency(currency: string): boolean {
@@ -41,7 +40,7 @@ export function validateDateRange(startDate: Date, endDate: Date): boolean {
  */
 
 // Common schemas
-export const uuidSchema = z.string().uuid()
+export const idSchema = z.coerce.number().int().positive()
 export const emailSchema = z.string().email()
 export const positiveNumberSchema = z.number().nonnegative()
 export const positiveDecimalSchema = z.coerce.number().nonnegative()
@@ -67,7 +66,7 @@ export const updateOrganizationSchema = z.object({
 
 // User schemas
 export const createUserSchema = z.object({
-  organizationId: uuidSchema,
+  organizationId: idSchema,
   email: emailSchema,
   name: z.string().min(1).max(255).optional(),
   passwordHash: z.string().optional(),
@@ -86,11 +85,11 @@ export const updateUserSchema = z.object({
 
 // Project schemas
 export const createProjectSchema = z.object({
-  organizationId: uuidSchema,
+  organizationId: idSchema,
   name: z.string().min(1).max(255),
   code: z.string().max(50).optional(),
   description: z.string().optional(),
-  projectManagerId: uuidSchema.optional(),
+  projectManagerId: idSchema.optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   budget: positiveDecimalSchema.optional(),
@@ -101,7 +100,7 @@ export const updateProjectSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   code: z.string().max(50).optional(),
   description: z.string().optional(),
-  projectManagerId: uuidSchema.nullable().optional(),
+  projectManagerId: idSchema.nullable().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   budget: positiveDecimalSchema.optional(),
@@ -112,7 +111,7 @@ export const updateProjectSchema = z.object({
 
 // Project Member schemas
 export const createProjectMemberSchema = z.object({
-  userId: uuidSchema,
+  userId: idSchema,
   roleInProject: z.string().optional(),
 })
 
@@ -122,7 +121,7 @@ export const updateProjectMemberSchema = z.object({
 
 // Task List schemas
 export const createTaskListSchema = z.object({
-  projectId: uuidSchema,
+  projectId: idSchema,
   title: z.string().min(1).max(255),
   ordinal: z.number().int().default(0),
 })
@@ -137,11 +136,11 @@ export const taskStatusEnum = z.enum(['new', 'in_progress', 'in_review', 'comple
 export const taskPrioritySchema = z.coerce.number().int().min(1).max(4)
 
 export const createTaskSchema = z.object({
-  projectId: uuidSchema,
-  listId: uuidSchema.optional(),
+  projectId: idSchema,
+  listId: idSchema.optional(),
   title: z.string().min(1).max(255),
   description: z.string().optional(),
-  assigneeId: uuidSchema.optional(),
+  assigneeId: idSchema.optional(),
   priority: taskPrioritySchema.default(2),
   status: taskStatusEnum.default('new'),
   estimateHours: positiveDecimalSchema.optional(),
@@ -150,10 +149,10 @@ export const createTaskSchema = z.object({
 })
 
 export const updateTaskSchema = z.object({
-  listId: uuidSchema.optional(),
+  listId: idSchema.optional(),
   title: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
-  assigneeId: uuidSchema.nullable().optional(),
+  assigneeId: idSchema.nullable().optional(),
   priority: taskPrioritySchema.optional(),
   status: taskStatusEnum.optional(),
   estimateHours: positiveDecimalSchema.optional(),
@@ -166,7 +165,7 @@ export const updateTaskSchema = z.object({
 export const projectQuerySchema = paginationSchema.extend({
   q: z.string().optional(),
   status: z.string().optional(),
-  managerId: uuidSchema.optional(),
+  managerId: idSchema.optional(),
   includeProjects: z.coerce.boolean().optional(),
 })
 
@@ -178,8 +177,8 @@ export const userQuerySchema = paginationSchema.extend({
 
 export const taskQuerySchema = paginationSchema.extend({
   q: z.string().optional(),
-  projectId: uuidSchema.optional(),
-  assigneeId: uuidSchema.optional(),
+  projectId: idSchema.optional(),
+  assigneeId: idSchema.optional(),
   status: taskStatusEnum.optional(),
   priority: taskPrioritySchema.optional(),
 })

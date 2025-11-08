@@ -11,7 +11,7 @@ import {
   parseBody,
   parseQuery,
   taskQuerySchema,
-  uuidSchema,
+  idSchema,
 } from '@/lib/validation'
 import { prisma } from '@/lib/prisma'
 
@@ -58,3 +58,4 @@ export async function POST(req: Request) {
     return handleError(error)
   }
 }
+

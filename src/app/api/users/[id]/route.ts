@@ -6,7 +6,7 @@ import {
   noContentResponse,
 } from '@/lib/response'
 import { handleError } from '@/lib/error'
-import { updateUserSchema, parseBody, uuidSchema } from '@/lib/validation'
+import { updateUserSchema, parseBody, idSchema } from '@/lib/validation'
 
 /**
  * GET /api/users/:id
@@ -18,7 +18,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    uuidSchema.parse(id)
+    idSchema.parse(id)
 
     const { searchParams } = new URL(req.url)
     const organizationId = searchParams.get('organizationId')
@@ -51,7 +51,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    uuidSchema.parse(id)
+    idSchema.parse(id)
 
     const { searchParams } = new URL(req.url)
     const organizationId = searchParams.get('organizationId')
@@ -86,7 +86,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    uuidSchema.parse(id)
+    idSchema.parse(id)
 
     const { searchParams } = new URL(req.url)
     const organizationId = searchParams.get('organizationId')
