@@ -38,7 +38,7 @@ export function PendingInvitationsList() {
         throw new Error(data.error || 'Failed to fetch invitations')
       }
 
-      setInvitations(data.data || [])
+      setInvitations(data.data?.invitations || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load invitations')
     } finally {

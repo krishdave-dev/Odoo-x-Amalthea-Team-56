@@ -76,6 +76,8 @@ export async function GET(req: NextRequest) {
  * Create a new expense
  * 
  * Permissions: All authenticated users can create expenses
+ * - Managers/Admins: Auto-approved
+ * - Members: Requires approval
  */
 export async function POST(req: NextRequest) {
   try {
@@ -91,9 +93,12 @@ export async function POST(req: NextRequest) {
 
     // Use authenticated user as creator
     const createdByUserId = user!.id
+    
+    // Check if auto-approve is requested and user has permission
+    const autoApprove = body.autoApprove && (user!.role === 'manager' || user!.role === 'admin')
 
-    // Create expense
-    const result = await expenseService.createExpense(data, createdByUserId)
+    // Create expense with auto-approval for managers/admins
+    const result = await expenseService.createExpense(data, createdByUserId, autoApprove)
 
     if (!result.success) {
       return handleError(new Error(result.error))

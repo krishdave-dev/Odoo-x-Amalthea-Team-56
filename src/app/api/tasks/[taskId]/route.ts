@@ -19,9 +19,9 @@ export async function GET(
 ) {
   try {
     const { taskId } = await params
-    idSchema.parse(taskId)
+    const parsedTaskId = idSchema.parse(taskId)
 
-    const task = await taskService.getTaskById(taskId)
+    const task = await taskService.getTaskById(parsedTaskId)
 
     if (!task) {
       return notFoundResponse('Task')
@@ -43,12 +43,12 @@ export async function PUT(
 ) {
   try {
     const { taskId } = await params
-    idSchema.parse(taskId)
+    const parsedTaskId = idSchema.parse(taskId)
 
     const body = await parseBody(req, updateTaskSchema)
 
     const version = body.version || 1
-    const result = await taskService.updateTask(taskId, version, body)
+    const result = await taskService.updateTask(parsedTaskId, version, body)
 
     if (!result.success) {
       return errorResponse(result.error || 'Update failed', 409)
@@ -70,9 +70,9 @@ export async function DELETE(
 ) {
   try {
     const { taskId } = await params
-    idSchema.parse(taskId)
+    const parsedTaskId = idSchema.parse(taskId)
 
-    const success = await taskService.deleteTask(taskId)
+    const success = await taskService.deleteTask(parsedTaskId)
 
     if (!success) {
       return errorResponse('Failed to delete task', 500)

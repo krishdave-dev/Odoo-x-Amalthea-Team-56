@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { FileUpload } from "@/components/ui/file-upload";
+import { AttachmentList } from "@/components/ui/attachment-list";
 import {
   Select,
   SelectContent,
@@ -111,6 +113,10 @@ export function ProjectForm({
     initialData?.image || null
   );
   const [status, setStatus] = useState(initialData?.status || "planned");
+  const [attachmentRefresh, setAttachmentRefresh] = useState(0);
+  
+  // For create mode: use negative number as temporary project ID
+  const [tempProjectId] = useState(() => -Math.floor(Math.random() * 1000000));
 
   // Organization users
   const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
@@ -312,6 +318,30 @@ export function ProjectForm({
           await addTeamMembers(data.data.id, allTeamMembers);
         }
 
+        // If creating, reassociate any uploaded attachments from temporary ID to actual project ID
+        if (mode === "create" && data.data?.id && user?.organizationId) {
+          try {
+            console.log('🔄 Reassociating attachments from temp ID:', tempProjectId, 'to project ID:', data.data.id);
+            const reassociateResponse = await fetch('/api/attachments/reassociate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                organizationId: user.organizationId,
+                temporaryOwnerId: tempProjectId,
+                temporaryOwnerType: 'pending_project',
+                actualOwnerId: data.data.id,
+                actualOwnerType: 'project',
+              }),
+            });
+            const reassociateResult = await reassociateResponse.json();
+            console.log('🔄 Reassociate result:', reassociateResult);
+          } catch (error) {
+            console.error('Failed to reassociate attachments:', error);
+            // Don't fail the whole operation
+          }
+        }
+
         // If editing and team members changed, update them
         if (mode === "edit" && initialData?.id) {
           await updateTeamMembers(initialData.id, allTeamMembers);
@@ -320,9 +350,12 @@ export function ProjectForm({
         onSave?.(data.data);
         router.push("/project");
       } else {
+        const errorMsg = typeof data.error === 'string' 
+          ? data.error 
+          : data.error?.message || "Failed to save project";
         toast({
           title: "Error",
-          description: data.error || "Failed to save project",
+          description: errorMsg,
           variant: "destructive",
         });
       }
@@ -587,6 +620,7 @@ export function ProjectForm({
                         setStartDateOpen(false);
                       }}
                       initialFocus
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     />
                   </PopoverContent>
                 </Popover>
@@ -619,9 +653,12 @@ export function ProjectForm({
                         setEndDateOpen(false);
                       }}
                       initialFocus
-                      disabled={(date) => 
-                        startDate ? date < startDate : false
-                      }
+                      disabled={(date) => {
+                        const today = new Date(new Date().setHours(0, 0, 0, 0));
+                        if (date < today) return true;
+                        if (startDate && date < startDate) return true;
+                        return false;
+                      }}
                     />
                   </PopoverContent>
                 </Popover>
@@ -649,6 +686,46 @@ export function ProjectForm({
 
               {/* Priority - Removed as not in schema */}
             </div>
+
+            {/* Attachments - Images Only (Available in both create and edit modes) */}
+            {user?.organizationId && (
+              <div className="space-y-3">
+                <Label className="text-base">Project Images</Label>
+                <FileUpload
+                  organizationId={user.organizationId}
+                  ownerType={mode === "create" ? "pending_project" : "project"}
+                  ownerId={mode === "create" ? tempProjectId : (initialData?.id || 0)}
+                  uploadedBy={user.id}
+                  accept="image/*"
+                  maxSizeMB={10}
+                  multiple={true}
+                  showPreview={true}
+                  onUploadComplete={() => setAttachmentRefresh(prev => prev + 1)}
+                />
+                {mode === "edit" && initialData?.id && (
+                  <div className="mt-4">
+                    <AttachmentList
+                      ownerType="project"
+                      ownerId={initialData.id}
+                      organizationId={user.organizationId}
+                      allowDelete={true}
+                      refreshTrigger={attachmentRefresh}
+                    />
+                  </div>
+                )}
+                {mode === "create" && (
+                  <div className="mt-4">
+                    <AttachmentList
+                      ownerType="pending_project"
+                      ownerId={tempProjectId}
+                      organizationId={user.organizationId}
+                      allowDelete={true}
+                      refreshTrigger={attachmentRefresh}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Description */}
             <div className="space-y-3">

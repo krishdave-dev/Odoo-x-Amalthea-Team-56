@@ -131,7 +131,8 @@ export class ExpenseService {
    */
   async createExpense(
     input: CreateExpenseInput,
-    createdByUserId: number
+    createdByUserId: number,
+    autoApprove: boolean = false
   ): Promise<{ success: boolean; expense?: Expense; error?: string }> {
     try {
       // Validate organization exists
@@ -160,6 +161,10 @@ export class ExpenseService {
 
       // Use transaction to ensure atomicity
       const expense = await prisma.$transaction(async (tx) => {
+        // Determine initial status based on auto-approval
+        const initialStatus = autoApprove ? 'approved' : 'submitted';
+        const now = new Date();
+
         // Create the expense
         const newExpense = await tx.expense.create({
           data: {
@@ -170,7 +175,12 @@ export class ExpenseService {
             billable: input.billable,
             note: input.note,
             receiptUrl: input.receiptUrl,
-            status: 'draft',
+            status: initialStatus,
+            submittedAt: now,
+            ...(autoApprove && {
+              approvedBy: createdByUserId,
+              approvedAt: now,
+            }),
           },
         })
 

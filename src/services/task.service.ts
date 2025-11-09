@@ -66,11 +66,13 @@ export class TaskService {
     pageSize: number = 25,
     filters?: {
       projectId?: number
+      projectIds?: number[]
       listId?: number
       assigneeId?: number
       status?: string
       priority?: number
       search?: string
+      organizationId?: number
     }
   ): Promise<PaginatedResponse<any>> {
     const skip = (page - 1) * pageSize
@@ -79,6 +81,9 @@ export class TaskService {
     const where: any = {
       deletedAt: null,
       ...(filters?.projectId && { projectId: filters.projectId }),
+      ...(filters?.projectIds && filters.projectIds.length > 0 && { 
+        projectId: { in: filters.projectIds } 
+      }),
       ...(filters?.listId && { listId: filters.listId }),
       ...(filters?.assigneeId && { assigneeId: filters.assigneeId }),
       ...(filters?.status && { status: filters.status }),
@@ -89,6 +94,14 @@ export class TaskService {
           { description: { contains: filters.search, mode: 'insensitive' } },
         ],
       }),
+    }
+    
+    // If organizationId is provided, ensure tasks are from that org's projects
+    if (filters?.organizationId) {
+      where.project = {
+        organizationId: filters.organizationId,
+        deletedAt: null,
+      }
     }
 
     const [data, total] = await Promise.all([
@@ -126,8 +139,43 @@ export class TaskService {
       prisma.task.count({ where }),
     ])
 
+    // Fetch attachments (images only) for all tasks
+    const taskIds = data.map((task: any) => task.id)
+    const attachments = taskIds.length > 0 ? await prisma.attachment.findMany({
+      where: {
+        ownerType: 'task',
+        ownerId: { in: taskIds },
+        status: 'active',
+        mimeType: { startsWith: 'image/' },
+      },
+      select: {
+        ownerId: true,
+        fileUrl: true,
+        fileName: true,
+      },
+      orderBy: { id: 'asc' },
+      take: taskIds.length * 3, // Max 3 images per task
+    }) : []
+
+    // Group attachments by task (max 3 per task)
+    const attachmentsByTask = attachments.reduce((acc: Record<number, string[]>, att: any) => {
+      if (!acc[att.ownerId]) {
+        acc[att.ownerId] = []
+      }
+      if (acc[att.ownerId].length < 3 && att.fileUrl) {
+        acc[att.ownerId].push(att.fileUrl)
+      }
+      return acc
+    }, {})
+
+    // Add images to each task
+    const tasksWithImages = data.map((task: any) => ({
+      ...task,
+      images: attachmentsByTask[task.id] || [],
+    }))
+
     return {
-      data,
+      data: tasksWithImages,
       pagination: {
         page,
         pageSize,

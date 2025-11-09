@@ -145,7 +145,7 @@ export const createTaskSchema = z.object({
   status: taskStatusEnum.default('new'),
   estimateHours: positiveDecimalSchema.optional(),
   dueDate: z.coerce.date().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 })
 
 export const updateTaskSchema = z.object({
@@ -157,7 +157,7 @@ export const updateTaskSchema = z.object({
   status: taskStatusEnum.optional(),
   estimateHours: positiveDecimalSchema.optional(),
   dueDate: z.coerce.date().nullable().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   version: z.number().int().optional(),
 })
 

@@ -51,6 +51,10 @@ export interface ProjectLinks {
       amount: number
       status: string
       invoiceDate: Date
+      salesOrder?: {
+        id: number
+        soNumber: string
+      } | null
     }[]
     bills: {
       id: number
@@ -58,6 +62,10 @@ export interface ProjectLinks {
       amount: number
       status: string
       billDate: Date
+      purchaseOrder?: {
+        id: number
+        poNumber: string
+      } | null
     }[]
     salesOrders: {
       id: number
@@ -215,6 +223,12 @@ export class ProjectLinksService {
               amount: true,
               status: true,
               invoiceDate: true,
+              salesOrder: {
+                select: {
+                  id: true,
+                  soNumber: true,
+                },
+              },
             },
           })
         : Promise.resolve([]),
@@ -231,6 +245,12 @@ export class ProjectLinksService {
               amount: true,
               status: true,
               billDate: true,
+              purchaseOrder: {
+                select: {
+                  id: true,
+                  poNumber: true,
+                },
+              },
             },
           })
         : Promise.resolve([]),

@@ -84,7 +84,7 @@ export function getPermissions(role: UserRole | string): PermissionCheck {
         canManageTasks: true, // Manage all tasks in their projects
         canViewAllTasks: true,
         canUpdateOwnTasks: true,
-        canManageFinance: false, // Cannot directly manage finance docs
+        canManageFinance: true, // Can manage finance docs
         canCreateExpenses: true,
         canApproveExpenses: true, // Approve expenses
         canTriggerInvoices: true, // Trigger invoices

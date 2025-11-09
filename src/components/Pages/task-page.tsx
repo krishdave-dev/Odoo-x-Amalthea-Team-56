@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
+import { TaskCard } from "@/components/MainPages/Task/TaskCard";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -19,6 +20,7 @@ import {
   ChevronRight,
   MoreVertical,
   Flag,
+  Pencil,
 } from "lucide-react";
 import { StatsCards } from "@/components/MainPages/Stats/StatsCards";
 import {
@@ -26,9 +28,12 @@ import {
   TaskModel,
   TaskStatus,
 } from "@/components/MainPages/Task/TaskActionDialog";
+import { MemberTaskActions } from "@/components/MainPages/Task/MemberTaskActions";
+import { ViewTimesheetsButton } from "@/components/MainPages/Task/ViewTimesheetsButton";
 // Fetch tasks from backend API
 
 export function TaskPage() {
+  const router = useRouter();
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
@@ -39,36 +44,14 @@ export function TaskPage() {
   const [currentUser, setCurrentUser] = useState<{
     id: number;
     role: string;
+    organizationId: number;
   } | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        // Use the backend's allowed max (100) to satisfy validation
-        const res = await fetch(`/api/tasks?page=1&pageSize=100`, {
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          throw new Error(`Failed to load tasks (${res.status})`);
-        }
-        const json = await res.json();
-        const data = (json?.data ?? []) as TaskModel[];
-        console.log(data);
-        if (isMounted) setTasksState(data);
-      } catch (e: any) {
-        if (isMounted) setError(e?.message || "Failed to load tasks");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    fetchTasks();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const [kpiMetrics, setKpiMetrics] = useState({
+    activeProjects: 0,
+    delayedTasks: 0,
+    hoursLogged: 0,
+    revenueEarned: 0,
+  });
 
   // Load current user for role-based filtering
   useEffect(() => {
@@ -76,10 +59,16 @@ export function TaskPage() {
     const fetchMe = async () => {
       try {
         const res = await fetch("/api/auth/me", { cache: "no-store" });
-        if (!res.ok) return; // unauthenticated or error => show nothing extra
+        if (!res.ok) return;
         const json = await res.json();
         const user = json?.user;
-        if (mounted && user) setCurrentUser({ id: user.id, role: user.role });
+        if (mounted && user) {
+          setCurrentUser({ 
+            id: user.id, 
+            role: user.role,
+            organizationId: user.organizationId 
+          });
+        }
       } catch (_) {
         // ignore
       }
@@ -90,34 +79,76 @@ export function TaskPage() {
     };
   }, []);
 
-  // Role-based visibility: managers see all tasks, others only see their assigned tasks
-  const roleFilteredTasks = useMemo(() => {
-    if (!currentUser) return tasksState; // until user loads, show all to avoid flicker
-    if (currentUser.role === "manager") return tasksState;
-    return tasksState.filter((t) => t.assigneeId === currentUser.id);
-  }, [tasksState, currentUser]);
+  const fetchTasks = useCallback(async () => {
+    if (!currentUser) return; // Wait for user to load
+    
+    try {
+      setLoading(true);
+      setError(null);
+      // Use the backend's allowed max (100) to satisfy validation
+      const res = await fetch(`/api/tasks?page=1&pageSize=100`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to load tasks (${res.status})`);
+      }
+      const json = await res.json();
+      const data = (json?.data ?? []) as TaskModel[];
+      
+      // Sort tasks by deadline (earliest first) - this creates priority
+      const sortedData = data.sort((a, b) => {
+        const dateA = new Date(a.dueDate).getTime();
+        const dateB = new Date(b.dueDate).getTime();
+        
+        // If dates are invalid, put them at the end
+        if (isNaN(dateA)) return 1;
+        if (isNaN(dateB)) return -1;
+        
+        return dateA - dateB; // Earliest deadline = highest priority
+      });
+      
+      console.log(sortedData);
+      setTasksState(sortedData);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load tasks");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser]);
 
-  const allTasks = roleFilteredTasks;
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Fetch KPI metrics from API
+  useEffect(() => {
+    const fetchKPIs = async () => {
+      if (!currentUser?.organizationId) return;
+
+      try {
+        const response = await fetch(
+          `/api/analytics/dashboard/kpis?organizationId=${currentUser.organizationId}`,
+          { credentials: "include" }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setKpiMetrics(result.data);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching KPIs:", error);
+        // Silently fail - KPIs are not critical
+      }
+    };
+
+    fetchKPIs();
+  }, [currentUser?.organizationId]);
+
+  // Backend now handles role-based filtering, so we use all tasks
+  const allTasks = tasksState;
   const totalPages = Math.ceil(allTasks.length / itemsPerPage);
-
-  // Metrics calculation from mock data
-  const metrics = useMemo(() => {
-    const today = new Date();
-    const activeProjects = new Set(allTasks.map((t) => t.projectName)).size; // number of distinct project names in tasks
-    // Delayed tasks: due date parsed & overdue
-    const delayedTasks = allTasks.filter((t) => {
-      const d = Date.parse(t.dueDate);
-      return !isNaN(d) && new Date(d) < today; // overdue by due date
-    }).length;
-    // Hours logged mock: assume high=6h, medium=4h, low=2h
-    const hoursLogged = allTasks.reduce((sum, t) => {
-      if (t.priority === "high") return sum + 6;
-      if (t.priority === "medium") return sum + 4;
-      return sum + 2;
-    }, 0);
-    const revenueEarned = hoursLogged * 90; // $90/hr placeholder
-    return { activeProjects, delayedTasks, hoursLogged, revenueEarned };
-  }, [allTasks]);
 
   // computed filter counts for the Filter popover
   const filterCounts = useMemo(() => {
@@ -132,12 +163,17 @@ export function TaskPage() {
   // filter state (only used on this page)
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [deadlineFilter, setDeadlineFilter] = useState<
     "all" | "next7" | "overdue"
   >("all");
 
   const uniqueAssignees = useMemo(() => {
     return Array.from(new Set(allTasks.map((t) => t.assignedTo)));
+  }, [allTasks]);
+
+  const uniqueProjects = useMemo(() => {
+    return Array.from(new Set(allTasks.map((t) => t.projectName))).sort();
   }, [allTasks]);
 
   const toggleAssignee = (name: string) => {
@@ -152,9 +188,16 @@ export function TaskPage() {
     );
   };
 
+  const toggleProject = (projectName: string) => {
+    setSelectedProjects((prev) =>
+      prev.includes(projectName) ? prev.filter((p) => p !== projectName) : [...prev, projectName]
+    );
+  };
+
   const clearFilters = () => {
     setSelectedAssignees([]);
     setSelectedPriorities([]);
+    setSelectedProjects([]);
     setDeadlineFilter("all");
   };
 
@@ -173,6 +216,11 @@ export function TaskPage() {
     if (
       selectedPriorities.length &&
       !selectedPriorities.includes(task.priority)
+    )
+      return false;
+    if (
+      selectedProjects.length &&
+      !selectedProjects.includes(task.projectName)
     )
       return false;
 
@@ -197,20 +245,69 @@ export function TaskPage() {
     return true;
   };
 
-  const filteredNew = roleFilteredTasks
+  const filteredNew = allTasks
     .filter((t) => t.status === "new")
-    .filter(matchesFilters);
-  const filteredInProgress = roleFilteredTasks
+    .filter(matchesFilters)
+    .sort((a, b) => {
+      // Sort by priority first (urgent=4, high=3, medium=2, low=1)
+      const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+      const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Then by deadline (earliest first)
+      const dateA = new Date(a.dueDate).getTime();
+      const dateB = new Date(b.dueDate).getTime();
+      if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
+      if (isNaN(dateA)) return 1;
+      if (isNaN(dateB)) return -1;
+      
+      return 0;
+    });
+    
+  const filteredInProgress = allTasks
     .filter((t) => t.status === "in_progress")
-    .filter(matchesFilters);
-  const filteredCompleted = roleFilteredTasks
+    .filter(matchesFilters)
+    .sort((a, b) => {
+      // Sort by priority first (urgent=4, high=3, medium=2, low=1)
+      const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+      const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Then by deadline (earliest first)
+      const dateA = new Date(a.dueDate).getTime();
+      const dateB = new Date(b.dueDate).getTime();
+      if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
+      if (isNaN(dateA)) return 1;
+      if (isNaN(dateB)) return -1;
+      
+      return 0;
+    });
+    
+  const filteredCompleted = allTasks
     .filter((t) => t.status === "completed")
-    .filter(matchesFilters);
+    .filter(matchesFilters)
+    .sort((a, b) => {
+      // Sort by priority first (urgent=4, high=3, medium=2, low=1)
+      const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+      const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Then by deadline (earliest first)
+      const dateA = new Date(a.dueDate).getTime();
+      const dateB = new Date(b.dueDate).getTime();
+      if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
+      if (isNaN(dateA)) return 1;
+      if (isNaN(dateB)) return -1;
+      
+      return 0;
+    });
+    
   const filteredAll = [
     ...filteredNew,
     ...filteredInProgress,
     ...filteredCompleted,
   ];
+  
   const handleTaskUpdate = (updated: TaskModel) => {
     setTasksState((prev) =>
       prev.map((t) => (t.id === updated.id ? updated : t))
@@ -219,6 +316,14 @@ export function TaskPage() {
 
   const role: "team" | "manager" | "admin" | string =
     currentUser?.role ?? "team";
+
+  // Check if current user can edit tasks (managers and admins only)
+  const canEditTasks = currentUser?.role === "admin" || currentUser?.role === "manager";
+
+  // Navigate to edit task page
+  const handleEditTask = (taskId: number) => {
+    router.push(`/edittask?id=${taskId}`);
+  };
 
   // Use ProjectCard from MainPages for task cards/list so visuals match project cards
 
@@ -264,7 +369,12 @@ export function TaskPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
           <p className="text-muted-foreground mt-2">
-            View and manage all your tasks across projects
+            {currentUser?.role === 'manager' 
+              ? 'View and manage all tasks across the projects you manage'
+              : currentUser?.role === 'member'
+              ? 'View and work on tasks assigned to you'
+              : 'View and manage all tasks across projects'
+            }
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -272,60 +382,143 @@ export function TaskPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm">
                 Filters
+                {(selectedAssignees.length > 0 || selectedPriorities.length > 0 || selectedProjects.length > 0 || deadlineFilter !== "all") && (
+                  <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center">
+                    {selectedAssignees.length + selectedPriorities.length + selectedProjects.length + (deadlineFilter !== "all" ? 1 : 0)}
+                  </Badge>
+                )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48">
-              <div className="flex flex-col text-sm">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start w-full px-3 py-2"
-                >
-                  Assignees
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start w-full px-3 py-2"
-                >
-                  Deadline
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start w-full px-3 py-2"
-                >
-                  Date of creation
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start w-full px-3 py-2"
-                >
-                  Priority
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start w-full px-3 py-2"
-                >
-                  Status
-                </Button>
+            <PopoverContent className="w-72" align="end">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Filters</h3>
+                  {(selectedAssignees.length > 0 || selectedPriorities.length > 0 || selectedProjects.length > 0 || deadlineFilter !== "all") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="h-auto p-1 text-xs"
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+
+                {/* Projects Filter */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Projects</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {uniqueProjects.map((projectName) => (
+                      <label key={projectName} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedProjects.includes(projectName)}
+                          onChange={() => toggleProject(projectName)}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">{projectName || "No Project"}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Assignees Filter */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Assignees ({filterCounts.assignees})</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {uniqueAssignees.map((assignee) => (
+                      <label key={assignee} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedAssignees.includes(assignee)}
+                          onChange={() => toggleAssignee(assignee)}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">{assignee || "Unassigned"}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Priority Filter */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Priority</h4>
+                  <div className="space-y-2">
+                    {["low", "medium", "high", "urgent"].map((priority) => (
+                      <label key={priority} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedPriorities.includes(priority)}
+                          onChange={() => togglePriority(priority)}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm capitalize flex items-center gap-2">
+                          {priority}
+                          {filterCounts.priorities[priority] && (
+                            <Badge variant="secondary" className="text-xs">
+                              {filterCounts.priorities[priority]}
+                            </Badge>
+                          )}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Deadline Filter */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Deadline</h4>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deadline"
+                        checked={deadlineFilter === "all"}
+                        onChange={() => setDeadlineFilter("all")}
+                        className="rounded-full"
+                      />
+                      <span className="text-sm">All</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deadline"
+                        checked={deadlineFilter === "next7"}
+                        onChange={() => setDeadlineFilter("next7")}
+                        className="rounded-full"
+                      />
+                      <span className="text-sm">Next 7 days</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deadline"
+                        checked={deadlineFilter === "overdue"}
+                        onChange={() => setDeadlineFilter("overdue")}
+                        className="rounded-full"
+                      />
+                      <span className="text-sm text-red-600">Overdue</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </PopoverContent>
           </Popover>
 
-          <Button asChild>
-            <Link href="/createtask">
-              <Plus className="h-4 w-4" />
-              New Task
-            </Link>
-          </Button>
+          {currentUser && currentUser.role !== "member" && (
+            <Button asChild>
+              <Link href="/createtask">
+                <Plus className="h-4 w-4" />
+                New Task
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Stats Metrics */}
-      <StatsCards data={metrics} className="mb-6" />
+      <StatsCards data={kpiMetrics} className="mb-6" />
 
       {/* View Toggle and Pagination */}
       <div className="mb-6 flex items-center justify-between">
@@ -372,20 +565,40 @@ export function TaskPage() {
             <div className="space-y-3">
               {filteredNew.map((task) => (
                 <div key={task.id} className="space-y-2">
-                  <ProjectCard
+                  <TaskCard
                     title={task.title}
-                    tags={[task.projectName, task.priority]}
-                    images={[]}
-                    deadline={task.dueDate}
-                    managerName={task.assignedTo}
-                    managerAvatar={undefined}
-                    tasksCount={1}
+                    description={task.description || ''}
+                    priority={task.priority}
+                    assignedTo={task.assignedTo}
+                    dueDate={task.dueDate}
+                    projectName={task.projectName}
+                    status={task.status}
+                    taskId={task.id}
+                    images={task.images || []}
                   />
-                  <TaskActionDialog
-                    task={task}
-                    onUpdate={handleTaskUpdate}
-                    role={role}
-                  />
+                  <div className="flex gap-2">
+                    <ViewTimesheetsButton
+                      taskId={task.id}
+                      taskTitle={task.title}
+                      hoursLogged={task.hoursLogged || 0}
+                    />
+                    {canEditTasks ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditTask(task.id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    ) : currentUser?.role === "member" ? (
+                      <MemberTaskActions
+                        taskId={task.id}
+                        currentStatus={task.status}
+                        onStatusChange={fetchTasks}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
@@ -404,20 +617,40 @@ export function TaskPage() {
             <div className="space-y-3">
               {filteredInProgress.map((task) => (
                 <div key={task.id} className="space-y-2">
-                  <ProjectCard
+                  <TaskCard
                     title={task.title}
-                    tags={[task.projectName, task.priority]}
-                    images={[]}
-                    deadline={task.dueDate}
-                    managerName={task.assignedTo}
-                    managerAvatar={undefined}
-                    tasksCount={1}
+                    description={task.description || ''}
+                    priority={task.priority}
+                    assignedTo={task.assignedTo}
+                    dueDate={task.dueDate}
+                    projectName={task.projectName}
+                    status={task.status}
+                    taskId={task.id}
+                    images={task.images || []}
                   />
-                  <TaskActionDialog
-                    task={task}
-                    onUpdate={handleTaskUpdate}
-                    role={role}
-                  />
+                  <div className="flex gap-2">
+                    <ViewTimesheetsButton
+                      taskId={task.id}
+                      taskTitle={task.title}
+                      hoursLogged={task.hoursLogged || 0}
+                    />
+                    {canEditTasks ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditTask(task.id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    ) : currentUser?.role === "member" ? (
+                      <MemberTaskActions
+                        taskId={task.id}
+                        currentStatus={task.status}
+                        onStatusChange={fetchTasks}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
@@ -436,47 +669,210 @@ export function TaskPage() {
             <div className="space-y-3">
               {filteredCompleted.map((task) => (
                 <div key={task.id} className="space-y-2">
-                  <ProjectCard
+                  <TaskCard
                     title={task.title}
-                    tags={[task.projectName, task.priority]}
-                    images={[]}
-                    deadline={task.dueDate}
-                    managerName={task.assignedTo}
-                    managerAvatar={undefined}
-                    tasksCount={1}
+                    description={task.description || ''}
+                    priority={task.priority}
+                    assignedTo={task.assignedTo}
+                    dueDate={task.dueDate}
+                    projectName={task.projectName}
+                    status={task.status}
+                    taskId={task.id}
+                    images={task.images || []}
                   />
-                  <TaskActionDialog
-                    task={task}
-                    onUpdate={handleTaskUpdate}
-                    role={role}
-                  />
+                  <div className="flex gap-2">
+                    <ViewTimesheetsButton
+                      taskId={task.id}
+                      taskTitle={task.title}
+                      hoursLogged={task.hoursLogged || 0}
+                    />
+                    {canEditTasks ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditTask(task.id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    ) : currentUser?.role === "member" ? (
+                      <MemberTaskActions
+                        taskId={task.id}
+                        currentStatus={task.status}
+                        onStatusChange={fetchTasks}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredAll
-            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-            .map((task) => (
-              <div key={task.id} className="space-y-2">
-                <ProjectCard
-                  title={task.title}
-                  tags={[task.projectName, task.priority]}
-                  images={[]}
-                  deadline={task.dueDate}
-                  managerName={task.assignedTo}
-                  managerAvatar={undefined}
-                  tasksCount={1}
-                />
-                <TaskActionDialog
-                  task={task}
-                  onUpdate={handleTaskUpdate}
-                  role={role}
-                />
+        // List View - Grouped by Status
+        <div className="space-y-8">
+          {/* New Tasks Section */}
+          {filteredNew.length > 0 && (
+            <div>
+              <div className="mb-4 flex items-center gap-2 border-b pb-2">
+                <h3 className="text-xl font-semibold">New</h3>
+                <Badge variant="secondary" className="rounded-full">
+                  {filteredNew.length}
+                </Badge>
               </div>
-            ))}
+              <div className="space-y-3">
+                {filteredNew.map((task) => (
+                  <div key={task.id} className="space-y-2">
+                    <TaskCard
+                      title={task.title}
+                      description={task.description || ''}
+                      priority={task.priority}
+                      assignedTo={task.assignedTo}
+                      dueDate={task.dueDate}
+                      projectName={task.projectName}
+                      status={task.status}
+                      taskId={task.id}
+                      images={task.images || []}
+                    />
+                    <div className="flex gap-2">
+                      <ViewTimesheetsButton
+                        taskId={task.id}
+                        taskTitle={task.title}
+                        hoursLogged={task.hoursLogged || 0}
+                      />
+                      {canEditTasks ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTask(task.id)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      ) : currentUser?.role === "member" ? (
+                        <MemberTaskActions
+                          taskId={task.id}
+                          currentStatus={task.status}
+                          onStatusChange={fetchTasks}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* In Progress Tasks Section */}
+          {filteredInProgress.length > 0 && (
+            <div>
+              <div className="mb-4 flex items-center gap-2 border-b pb-2">
+                <h3 className="text-xl font-semibold">In Progress</h3>
+                <Badge variant="secondary" className="rounded-full bg-blue-100 text-blue-700">
+                  {filteredInProgress.length}
+                </Badge>
+              </div>
+              <div className="space-y-3">
+                {filteredInProgress.map((task) => (
+                  <div key={task.id} className="space-y-2">
+                    <TaskCard
+                      title={task.title}
+                      description={task.description || ''}
+                      priority={task.priority}
+                      assignedTo={task.assignedTo}
+                      dueDate={task.dueDate}
+                      projectName={task.projectName}
+                      status={task.status}
+                      taskId={task.id}
+                      images={task.images || []}
+                    />
+                    <div className="flex gap-2">
+                      <ViewTimesheetsButton
+                        taskId={task.id}
+                        taskTitle={task.title}
+                        hoursLogged={task.hoursLogged || 0}
+                      />
+                      {canEditTasks ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTask(task.id)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      ) : currentUser?.role === "member" ? (
+                        <MemberTaskActions
+                          taskId={task.id}
+                          currentStatus={task.status}
+                          onStatusChange={fetchTasks}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed Tasks Section */}
+          {filteredCompleted.length > 0 && (
+            <div>
+              <div className="mb-4 flex items-center gap-2 border-b pb-2">
+                <h3 className="text-xl font-semibold">Completed</h3>
+                <Badge variant="secondary" className="rounded-full">
+                  {filteredCompleted.length}
+                </Badge>
+              </div>
+              <div className="space-y-3">
+                {filteredCompleted.map((task) => (
+                  <div key={task.id} className="space-y-2">
+                    <TaskCard
+                      title={task.title}
+                      description={task.description || ''}
+                      priority={task.priority}
+                      assignedTo={task.assignedTo}
+                      dueDate={task.dueDate}
+                      projectName={task.projectName}
+                      status={task.status}
+                      taskId={task.id}
+                      images={task.images || []}
+                    />
+                    <div className="flex gap-2">
+                      <ViewTimesheetsButton
+                        taskId={task.id}
+                        taskTitle={task.title}
+                        hoursLogged={task.hoursLogged || 0}
+                      />
+                      {canEditTasks ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTask(task.id)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      ) : currentUser?.role === "member" ? (
+                        <MemberTaskActions
+                          taskId={task.id}
+                          currentStatus={task.status}
+                          onStatusChange={fetchTasks}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No tasks message */}
+          {filteredAll.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              No tasks found matching the filters
+            </div>
+          )}
         </div>
       )}
 

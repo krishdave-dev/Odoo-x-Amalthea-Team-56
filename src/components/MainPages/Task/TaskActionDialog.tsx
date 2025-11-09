@@ -36,6 +36,7 @@ export interface TaskModel {
   status: TaskStatus;
   hoursLogged: number;
   expenses: { amount: number; note?: string; id: string }[];
+  images?: string[];
 }
 
 interface TaskActionDialogProps {

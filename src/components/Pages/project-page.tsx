@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProjectCard } from "@/components/MainPages/Project/ProjectCard";
@@ -54,6 +54,7 @@ interface Project {
     members: number;
   };
   tasks?: Array<{ id: number }>;
+  images?: string[]; // Array of attachment URLs
 }
 
 interface PaginatedResponse {
@@ -79,6 +80,12 @@ export function ProjectPage() {
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [kpiMetrics, setKpiMetrics] = useState({
+    activeProjects: 0,
+    delayedTasks: 0,
+    hoursLogged: 0,
+    revenueEarned: 0,
+  });
   const itemsPerPage = 6;
 
   // Fetch projects from API
@@ -143,23 +150,37 @@ export function ProjectPage() {
     fetchProjects();
   }, [user?.organizationId, currentPage, statusFilter, toast]);
 
+  // Fetch KPI metrics
+  useEffect(() => {
+    const fetchKPIs = async () => {
+      if (!user?.organizationId) return;
+
+      try {
+        const response = await fetch(
+          `/api/analytics/dashboard/kpis?organizationId=${user.organizationId}`,
+          { credentials: "include" }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setKpiMetrics(result.data);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching KPIs:", error);
+        // Silently fail - KPIs are not critical
+      }
+    };
+
+    fetchKPIs();
+  }, [user?.organizationId]);
+
+
   // Reset to page 1 when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter]);
-
-  // Calculate metrics from projects data
-  const metrics = useMemo(() => {
-    const activeProjects = projects.filter(p => p.status === 'active').length;
-    const totalTasks = projects.reduce((sum, p) => sum + p._count.tasks, 0);
-    
-    return {
-      activeProjects,
-      delayedTasks: 0, // Would need task data to calculate
-      hoursLogged: 0, // Would need timesheet data to calculate
-      revenueEarned: 0, // Would need financial data to calculate
-    };
-  }, [projects]);
 
   // Handle edit project
   const handleEdit = (projectId: number) => {
@@ -315,7 +336,7 @@ export function ProjectPage() {
       </div>
 
       {/* Stats Metrics */}
-      <StatsCards data={metrics} className="mb-6" />
+      <StatsCards data={kpiMetrics} className="mb-6" />
 
       {/* View Toggle, Filter and Pagination */}
       <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -381,7 +402,7 @@ export function ProjectPage() {
               projectId={project.id}
               title={project.name}
               tags={[project.status]}
-              images={[]}
+              images={project.images || []}
               deadline={project.endDate ? format(new Date(project.endDate), "MMM dd, yyyy") : undefined}
               managerName={project.projectManager?.name || project.projectManager?.email || "Unassigned"}
               managerAvatar={undefined}
@@ -404,7 +425,7 @@ export function ProjectPage() {
               projectId={project.id}
               title={project.name}
               tags={[project.status]}
-              images={[]}
+              images={project.images || []}
               deadline={project.endDate ? format(new Date(project.endDate), "MMM dd, yyyy") : undefined}
               managerName={project.projectManager?.name || project.projectManager?.email || "Unassigned"}
               managerAvatar={undefined}

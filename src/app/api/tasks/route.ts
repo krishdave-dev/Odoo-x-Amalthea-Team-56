@@ -19,7 +19,8 @@ import { withAuth, checkProjectAccess } from '@/lib/middleware/auth'
  * Query params: page, pageSize, projectId, listId, assigneeId, status, priority, q
  * 
  * Permissions: 
- * - Admin/Manager/Finance: All tasks in their org
+ * - Admin/Finance: All tasks in their org
+ * - Manager: All tasks in projects they manage
  * - Member: Only tasks assigned to them
  */
 export async function GET(req: NextRequest) {
@@ -30,15 +31,42 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const query = parseQuery(searchParams, taskQuerySchema)
 
+    // Determine which projects the user can see tasks from
+    let projectIds: number[] | undefined = undefined
+    
+    if (user!.role === 'manager') {
+      // Managers can only see tasks from projects they manage
+      const managedProjects = await prisma.project.findMany({
+        where: {
+          organizationId: user!.organizationId,
+          projectManagerId: user!.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+      projectIds = managedProjects.map((p: { id: number }) => p.id)
+      
+      // If manager has no projects, return empty result
+      if (projectIds && projectIds.length === 0) {
+        return NextResponse.json({ 
+          success: true, 
+          data: [], 
+          meta: { page: 1, pageSize: query.pageSize, total: 0, totalPages: 0 } 
+        })
+      }
+    }
+
     const result = await taskService.getTasks(
       query.page,
       query.pageSize,
       {
         projectId: query.projectId,
-        assigneeId: query.assigneeId,
+        projectIds, // Pass array of project IDs for manager filtering
+        assigneeId: query.assigneeId || (user!.role === 'member' ? user!.id : undefined),
         status: query.status,
         priority: query.priority,
         search: query.q,
+        organizationId: user!.organizationId,
       }
     )
     
