@@ -36,7 +36,7 @@ export async function GET(req: Request) {
       status || undefined
     )
 
-    return successResponse({ invitations })
+    return successResponse(invitations)
   } catch (error) {
     return handleError(error)
   }
