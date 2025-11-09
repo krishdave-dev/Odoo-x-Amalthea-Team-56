@@ -29,13 +29,6 @@ export default function EditTaskPage() {
   const [taskData, setTaskData] = useState<TaskData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Redirect members - they don't have permission to edit tasks
-  useEffect(() => {
-    if (user && user.role === "member") {
-      router.push("/task");
-    }
-  }, [user, router]);
-
   useEffect(() => {
     const fetchTask = async () => {
       if (!taskId) {
@@ -114,11 +107,6 @@ export default function EditTaskPage() {
         <p className="text-muted-foreground">Loading task...</p>
       </div>
     );
-  }
-
-  // Don't show anything if user is a member
-  if (!user || user.role === "member") {
-    return null;
   }
 
   if (!taskData) {

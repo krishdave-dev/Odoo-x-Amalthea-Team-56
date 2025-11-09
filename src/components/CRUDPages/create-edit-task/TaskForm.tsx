@@ -49,9 +49,9 @@ interface Project {
 
 interface User {
   id: number;
-  name: string | null;
+  name?: string | null;
   email: string;
-  role: string;
+  role?: string;
 }
 
 export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
@@ -90,7 +90,7 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
   const [selectedProjectEndDate, setSelectedProjectEndDate] = useState<Date | undefined>();
   const [loadingData, setLoadingData] = useState(true);
 
-  // Timesheets state (kept for UI only)
+  // Timesheets state (kept for UI only in create mode)
   const [timesheets, setTimesheets] = useState<
     Array<{ employee: string; time: string }>
   >(
@@ -533,69 +533,6 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
           >
             Description
           </button>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="px-3 py-1 rounded-md border">Timesheets</button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-[480px]">
-              <div className="mb-3 flex items-center justify-between">
-                <h4 className="font-semibold">Timesheets</h4>
-                <Button size="sm" onClick={addTimesheet}>
-                  Add row
-                </Button>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Time logged</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {timesheets.map((t, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>
-                        <Input
-                          value={t.employee}
-                          onChange={(e) =>
-                            setTimesheets((prev) =>
-                              prev.map((r, i) =>
-                                i === idx
-                                  ? { ...r, employee: e.target.value }
-                                  : r
-                              )
-                            )
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          value={t.time}
-                          onChange={(e) =>
-                            setTimesheets((prev) =>
-                              prev.map((r, i) =>
-                                i === idx ? { ...r, time: e.target.value } : r
-                              )
-                            )
-                          }
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => removeTimesheet(idx)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </PopoverContent>
-          </Popover>
 
           <Popover>
             <PopoverTrigger asChild>

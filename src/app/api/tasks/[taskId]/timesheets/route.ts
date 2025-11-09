@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { successResponse, errorResponse, createdResponse } from '@/lib/response'
 import { handleError } from '@/lib/error'
 import { idSchema } from '@/lib/validation'
@@ -75,47 +76,72 @@ export async function POST(
     const hourlyRate = userDetails?.hourlyRate || new Decimal(0)
     const costAtTime = hourlyRate.mul(hoursDecimal)
 
-    // Create the timesheet entry
+    // Create the timesheet entry and corresponding expense in a transaction
     const now = new Date()
     const startTime = new Date(now.getTime() - hoursDecimal * 60 * 60 * 1000) // Subtract hours from now
 
-    const timesheet = await prisma.timesheet.create({
-      data: {
-        projectId: task.projectId,
-        taskId: parsedTaskId,
-        userId: user!.id,
-        start: startTime,
-        end: now,
-        durationHours: new Decimal(hoursDecimal),
-        billable: true,
-        notes: notes || null,
-        costAtTime,
-        status: 'draft',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Create the timesheet entry
+      const timesheet = await tx.timesheet.create({
+        data: {
+          projectId: task.projectId,
+          taskId: parsedTaskId,
+          userId: user!.id,
+          start: startTime,
+          end: now,
+          durationHours: new Decimal(hoursDecimal),
+          billable: true,
+          notes: notes || null,
+          costAtTime,
+          status: 'draft',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    })
+      })
 
-    // Update task's hours logged
-    await prisma.task.update({
-      where: { id: parsedTaskId },
-      data: {
-        hoursLogged: {
-          increment: hoursDecimal,
+      // Create corresponding expense if hourly rate is set
+      let expense = null
+      if (hourlyRate.toNumber() > 0) {
+        expense = await tx.expense.create({
+          data: {
+            organizationId: task.project.organizationId,
+            projectId: task.projectId,
+            userId: user!.id,
+            amount: costAtTime,
+            billable: true,
+            status: 'submitted', // Auto-submit timesheet-based expenses
+            note: `Timesheet hours: ${hoursDecimal}h on task "${task.title}"${notes ? ` - ${notes}` : ''}`,
+            submittedAt: now,
+          },
+        })
+      }
+
+      // Update task's hours logged
+      await tx.task.update({
+        where: { id: parsedTaskId },
+        data: {
+          hoursLogged: {
+            increment: hoursDecimal,
+          },
         },
-      },
+      })
+
+      return { timesheet, expense }
     })
 
     return createdResponse({
-      message: 'Hours logged successfully',
-      timesheet,
+      message: result.expense 
+        ? 'Hours logged successfully and expense created'
+        : 'Hours logged successfully',
+      timesheet: result.timesheet,
+      expense: result.expense,
     })
   } catch (err) {
     return handleError(err)

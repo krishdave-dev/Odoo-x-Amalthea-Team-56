@@ -29,6 +29,7 @@ import {
   TaskStatus,
 } from "@/components/MainPages/Task/TaskActionDialog";
 import { MemberTaskActions } from "@/components/MainPages/Task/MemberTaskActions";
+import { ViewTimesheetsButton } from "@/components/MainPages/Task/ViewTimesheetsButton";
 // Fetch tasks from backend API
 
 export function TaskPage() {
@@ -574,22 +575,29 @@ export function TaskPage() {
                     status={task.status}
                     taskId={task.id}
                   />
-                  {canEditTasks ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditTask(task.id)}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                  ) : currentUser?.role === "member" ? (
-                    <MemberTaskActions
+                  <div className="flex gap-2">
+                    <ViewTimesheetsButton
                       taskId={task.id}
-                      currentStatus={task.status}
-                      onStatusChange={fetchTasks}
+                      taskTitle={task.title}
+                      hoursLogged={task.hoursLogged || 0}
                     />
-                  ) : null}
+                    {canEditTasks ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditTask(task.id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    ) : currentUser?.role === "member" ? (
+                      <MemberTaskActions
+                        taskId={task.id}
+                        currentStatus={task.status}
+                        onStatusChange={fetchTasks}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
@@ -618,22 +626,29 @@ export function TaskPage() {
                     status={task.status}
                     taskId={task.id}
                   />
-                  {canEditTasks ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditTask(task.id)}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                  ) : currentUser?.role === "member" ? (
-                    <MemberTaskActions
+                  <div className="flex gap-2">
+                    <ViewTimesheetsButton
                       taskId={task.id}
-                      currentStatus={task.status}
-                      onStatusChange={fetchTasks}
+                      taskTitle={task.title}
+                      hoursLogged={task.hoursLogged || 0}
                     />
-                  ) : null}
+                    {canEditTasks ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditTask(task.id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    ) : currentUser?.role === "member" ? (
+                      <MemberTaskActions
+                        taskId={task.id}
+                        currentStatus={task.status}
+                        onStatusChange={fetchTasks}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
@@ -662,22 +677,29 @@ export function TaskPage() {
                     status={task.status}
                     taskId={task.id}
                   />
-                  {canEditTasks ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditTask(task.id)}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                  ) : currentUser?.role === "member" ? (
-                    <MemberTaskActions
+                  <div className="flex gap-2">
+                    <ViewTimesheetsButton
                       taskId={task.id}
-                      currentStatus={task.status}
-                      onStatusChange={fetchTasks}
+                      taskTitle={task.title}
+                      hoursLogged={task.hoursLogged || 0}
                     />
-                  ) : null}
+                    {canEditTasks ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditTask(task.id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    ) : currentUser?.role === "member" ? (
+                      <MemberTaskActions
+                        taskId={task.id}
+                        currentStatus={task.status}
+                        onStatusChange={fetchTasks}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
@@ -708,22 +730,29 @@ export function TaskPage() {
                       status={task.status}
                       taskId={task.id}
                     />
-                    {canEditTasks ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditTask(task.id)}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    ) : currentUser?.role === "member" ? (
-                      <MemberTaskActions
+                    <div className="flex gap-2">
+                      <ViewTimesheetsButton
                         taskId={task.id}
-                        currentStatus={task.status}
-                        onStatusChange={fetchTasks}
+                        taskTitle={task.title}
+                        hoursLogged={task.hoursLogged || 0}
                       />
-                    ) : null}
+                      {canEditTasks ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTask(task.id)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      ) : currentUser?.role === "member" ? (
+                        <MemberTaskActions
+                          taskId={task.id}
+                          currentStatus={task.status}
+                          onStatusChange={fetchTasks}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -752,22 +781,29 @@ export function TaskPage() {
                       status={task.status}
                       taskId={task.id}
                     />
-                    {canEditTasks ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditTask(task.id)}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    ) : currentUser?.role === "member" ? (
-                      <MemberTaskActions
+                    <div className="flex gap-2">
+                      <ViewTimesheetsButton
                         taskId={task.id}
-                        currentStatus={task.status}
-                        onStatusChange={fetchTasks}
+                        taskTitle={task.title}
+                        hoursLogged={task.hoursLogged || 0}
                       />
-                    ) : null}
+                      {canEditTasks ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTask(task.id)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      ) : currentUser?.role === "member" ? (
+                        <MemberTaskActions
+                          taskId={task.id}
+                          currentStatus={task.status}
+                          onStatusChange={fetchTasks}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -796,22 +832,29 @@ export function TaskPage() {
                       status={task.status}
                       taskId={task.id}
                     />
-                    {canEditTasks ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditTask(task.id)}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    ) : currentUser?.role === "member" ? (
-                      <MemberTaskActions
+                    <div className="flex gap-2">
+                      <ViewTimesheetsButton
                         taskId={task.id}
-                        currentStatus={task.status}
-                        onStatusChange={fetchTasks}
+                        taskTitle={task.title}
+                        hoursLogged={task.hoursLogged || 0}
                       />
-                    ) : null}
+                      {canEditTasks ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditTask(task.id)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      ) : currentUser?.role === "member" ? (
+                        <MemberTaskActions
+                          taskId={task.id}
+                          currentStatus={task.status}
+                          onStatusChange={fetchTasks}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>

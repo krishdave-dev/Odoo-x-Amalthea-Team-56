@@ -1,19 +1,31 @@
 import { NextRequest } from 'next/server'
 import { expenseService } from '@/services/expense.service'
-import { successResponse } from '@/lib/response'
+import { getCurrentUser } from '@/lib/session'
+import { canApproveExpense } from '@/lib/permissions'
+import { successResponse, errorResponse } from '@/lib/response'
 import { handleError } from '@/lib/error'
 import { idSchema, expenseWorkflowSchema } from '@/lib/validation'
 
 /**
  * POST /api/expenses/[id]/reject
  * Reject expense (submitted → rejected)
- * Requires manager, project_manager, or admin role
+ * Requires: canApproveExpenses permission (admin, manager, or finance)
  */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return errorResponse('Authentication required', 401)
+    }
+
+    // Check permission - same as approve
+    if (!canApproveExpense(user.role)) {
+      return errorResponse('Insufficient permissions to reject expenses', 403)
+    }
+
     const { id } = await params
     const expenseId = idSchema.parse(id)
     
@@ -21,15 +33,18 @@ export async function POST(
     const body = await req.json().catch(() => ({}))
     const { reason } = expenseWorkflowSchema.parse(body)
     
-    // organizationId and userId should come from authenticated session
     const { searchParams } = new URL(req.url)
     const organizationId = idSchema.parse(searchParams.get('organizationId'))
-    const rejectorId = idSchema.parse(searchParams.get('userId') || '1')
+
+    // Verify organization access
+    if (organizationId !== user.organizationId) {
+      return errorResponse('Access denied to this organization', 403)
+    }
 
     const result = await expenseService.rejectExpense(
       expenseId,
       organizationId,
-      rejectorId,
+      user.id,
       reason
     )
 

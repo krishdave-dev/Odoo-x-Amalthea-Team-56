@@ -3,14 +3,12 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { InviteUserDialog } from "@/components/invitations/InviteUserDialog";
-import { PendingInvitationsList } from "@/components/invitations/PendingInvitationsList";
-import { Building2, Shield, User, Mail } from "lucide-react";
-import { useState } from "react";
+import { FinanceManagement } from "@/components/finance/FinanceManagement";
+import { HourlyRateManager } from "@/components/settings/HourlyRateManager";
+import { Building2, Shield, User, DollarSign } from "lucide-react";
 
 export function SettingsPage() {
   const { user } = useAuth();
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -26,12 +24,13 @@ export function SettingsPage() {
   };
 
   const canInviteUsers = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'finance';
+  const canManageFinance = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'finance';
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your account and organization</p>
+        <p className="text-muted-foreground mt-2">Manage your account, organization, and finance</p>
       </div>
 
       <div className="grid gap-6">
@@ -200,27 +199,40 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Team Management - only for admins, managers, and finance */}
-        {canInviteUsers && (
+        {/* Hourly Rates Management - Admin only */}
+        {user?.role === 'admin' && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" />
-                    Team Management
-                  </CardTitle>
-                  <CardDescription>Invite new users to your organization</CardDescription>
-                </div>
-                <InviteUserDialog onInviteSent={() => setRefreshKey(prev => prev + 1)} />
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Employee Hourly Rates
+              </CardTitle>
+              <CardDescription>
+                Configure hourly rates for automatic expense creation from logged hours
+              </CardDescription>
             </CardHeader>
+            <CardContent>
+              <HourlyRateManager />
+            </CardContent>
           </Card>
         )}
 
-        {/* Pending Invitations - only for admins, managers, and finance */}
-        {canInviteUsers && (
-          <PendingInvitationsList key={refreshKey} />
+        {/* Finance Management - for admin, manager, and finance roles */}
+        {canManageFinance && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Finance Management
+              </CardTitle>
+              <CardDescription>
+                Manage sales orders, purchase orders, invoices, bills, and expenses
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FinanceManagement />
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
