@@ -661,6 +661,7 @@ export function ProjectDetailsDialog({
         onOpenChange={setCreateInvoiceOpen}
         projectId={projectId}
         organizationId={organizationId}
+        userId={user?.id || 0}
         salesOrders={links?.salesOrders.map(so => ({
           id: so.id,
           soNumber: so.soNumber,
@@ -677,6 +678,7 @@ export function ProjectDetailsDialog({
         onOpenChange={setCreateBillOpen}
         projectId={projectId}
         organizationId={organizationId}
+        userId={user?.id || 0}
         purchaseOrders={links?.purchaseOrders.map(po => ({
           id: po.id,
           poNumber: po.poNumber,

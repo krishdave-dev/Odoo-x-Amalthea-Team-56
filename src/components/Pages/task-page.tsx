@@ -574,6 +574,7 @@ export function TaskPage() {
                     projectName={task.projectName}
                     status={task.status}
                     taskId={task.id}
+                    images={task.images || []}
                   />
                   <div className="flex gap-2">
                     <ViewTimesheetsButton
@@ -625,6 +626,7 @@ export function TaskPage() {
                     projectName={task.projectName}
                     status={task.status}
                     taskId={task.id}
+                    images={task.images || []}
                   />
                   <div className="flex gap-2">
                     <ViewTimesheetsButton
@@ -676,6 +678,7 @@ export function TaskPage() {
                     projectName={task.projectName}
                     status={task.status}
                     taskId={task.id}
+                    images={task.images || []}
                   />
                   <div className="flex gap-2">
                     <ViewTimesheetsButton
@@ -729,6 +732,7 @@ export function TaskPage() {
                       projectName={task.projectName}
                       status={task.status}
                       taskId={task.id}
+                      images={task.images || []}
                     />
                     <div className="flex gap-2">
                       <ViewTimesheetsButton
@@ -780,6 +784,7 @@ export function TaskPage() {
                       projectName={task.projectName}
                       status={task.status}
                       taskId={task.id}
+                      images={task.images || []}
                     />
                     <div className="flex gap-2">
                       <ViewTimesheetsButton
@@ -831,6 +836,7 @@ export function TaskPage() {
                       projectName={task.projectName}
                       status={task.status}
                       taskId={task.id}
+                      images={task.images || []}
                     />
                     <div className="flex gap-2">
                       <ViewTimesheetsButton

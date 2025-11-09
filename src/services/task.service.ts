@@ -139,8 +139,43 @@ export class TaskService {
       prisma.task.count({ where }),
     ])
 
+    // Fetch attachments (images only) for all tasks
+    const taskIds = data.map((task: any) => task.id)
+    const attachments = taskIds.length > 0 ? await prisma.attachment.findMany({
+      where: {
+        ownerType: 'task',
+        ownerId: { in: taskIds },
+        status: 'active',
+        mimeType: { startsWith: 'image/' },
+      },
+      select: {
+        ownerId: true,
+        fileUrl: true,
+        fileName: true,
+      },
+      orderBy: { id: 'asc' },
+      take: taskIds.length * 3, // Max 3 images per task
+    }) : []
+
+    // Group attachments by task (max 3 per task)
+    const attachmentsByTask = attachments.reduce((acc: Record<number, string[]>, att: any) => {
+      if (!acc[att.ownerId]) {
+        acc[att.ownerId] = []
+      }
+      if (acc[att.ownerId].length < 3 && att.fileUrl) {
+        acc[att.ownerId].push(att.fileUrl)
+      }
+      return acc
+    }, {})
+
+    // Add images to each task
+    const tasksWithImages = data.map((task: any) => ({
+      ...task,
+      images: attachmentsByTask[task.id] || [],
+    }))
+
     return {
-      data,
+      data: tasksWithImages,
       pagination: {
         page,
         pageSize,

@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { FileUpload } from "@/components/ui/file-upload";
+import { AttachmentList } from "@/components/ui/attachment-list";
 import {
   Select,
   SelectTrigger,
@@ -82,6 +84,10 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
   const [status, setStatus] = useState<string>(
     initialData?.status || "new"
   );
+  const [attachmentRefresh, setAttachmentRefresh] = useState(0);
+  
+  // Generate temporary ID for pending tasks (used in create mode)
+  const [tempTaskId] = useState(() => -Math.floor(Math.random() * 1000000));
 
   // Data from API
   const [projects, setProjects] = useState<Project[]>([]);
@@ -292,6 +298,31 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
       const data = await res.json();
 
       if (data.success) {
+        // Reassociate attachments if in create mode
+        if (mode === "create" && data.data?.id && user?.organizationId) {
+          console.log('🔄 Reassociating task attachments from temp ID:', tempTaskId, 'to task ID:', data.data.id);
+          
+          try {
+            const reassociateResponse = await fetch('/api/attachments/reassociate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                organizationId: user.organizationId,
+                temporaryOwnerId: tempTaskId,
+                temporaryOwnerType: 'pending_task',
+                actualOwnerId: data.data.id,
+                actualOwnerType: 'task',
+              }),
+            });
+
+            const reassociateResult = await reassociateResponse.json();
+            console.log('🔄 Reassociate result:', reassociateResult);
+          } catch (error) {
+            console.error('Failed to reassociate attachments:', error);
+          }
+        }
+
         toast({
           title: "Success",
           description: `Task ${mode === "create" ? "created" : "updated"} successfully`,
@@ -497,9 +528,9 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
           </div>
         </div>
 
-        {/* Image */}
+        {/* Image - Legacy (keeping for backward compatibility) */}
         <div className="mb-6">
-          <Label className="block mb-2">Image</Label>
+          <Label className="block mb-2">Image (Legacy)</Label>
           {image ? (
             <img
               src={image}
@@ -522,6 +553,35 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
                 />
               </label>
             </Button>
+          )}
+        </div>
+
+        {/* Attachments - Images Only */}
+        <div className="mb-6">
+          <Label className="block mb-3 text-lg font-semibold">Task Images</Label>
+          {user?.organizationId && (
+            <>
+              <FileUpload
+                organizationId={user.organizationId}
+                ownerType={mode === "create" ? "pending_task" : "task"}
+                ownerId={mode === "create" ? tempTaskId : initialData?.id}
+                uploadedBy={user.id}
+                accept="image/*"
+                maxSizeMB={10}
+                multiple={true}
+                showPreview={true}
+                onUploadComplete={() => setAttachmentRefresh(prev => prev + 1)}
+              />
+              <div className="mt-4">
+                <AttachmentList
+                  ownerType={mode === "create" ? "pending_task" : "task"}
+                  ownerId={mode === "create" ? tempTaskId : initialData?.id}
+                  organizationId={user.organizationId}
+                  allowDelete={true}
+                  refreshTrigger={attachmentRefresh}
+                />
+              </div>
+            </>
           )}
         </div>
 

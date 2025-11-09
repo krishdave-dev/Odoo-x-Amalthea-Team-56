@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { FileUpload } from "@/components/ui/file-upload";
+import { AttachmentList } from "@/components/ui/attachment-list";
 
 interface SalesOrder {
   id: number;
@@ -24,6 +26,7 @@ interface CreateCustomerInvoiceDialogProps {
   onOpenChange: (open: boolean) => void;
   projectId: number;
   organizationId: number;
+  userId: number;
   salesOrders?: SalesOrder[];
   onSuccess: () => void;
 }
@@ -33,6 +36,7 @@ export function CreateCustomerInvoiceDialog({
   onOpenChange,
   projectId,
   organizationId,
+  userId,
   salesOrders = [],
   onSuccess,
 }: CreateCustomerInvoiceDialogProps) {
@@ -41,6 +45,11 @@ export function CreateCustomerInvoiceDialog({
   const [amount, setAmount] = useState("");
   const [selectedSoId, setSelectedSoId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachmentRefresh, setAttachmentRefresh] = useState(0);
+  
+  // Generate temporary ID for pending invoice
+  const [tempInvoiceId] = useState(() => -Math.floor(Math.random() * 1000000));
+  
   const { toast } = useToast();
 
   // Auto-fill amount when sales order is selected
@@ -98,6 +107,33 @@ export function CreateCustomerInvoiceDialog({
         throw new Error(errorData.error || "Failed to create customer invoice");
       }
 
+      const data = await response.json();
+
+      // Reassociate attachments from temporary ID to actual invoice ID
+      if (data.success && data.data?.id) {
+        console.log('🔄 Reassociating invoice attachments from temp ID:', tempInvoiceId, 'to invoice ID:', data.data.id);
+        
+        try {
+          const reassociateResponse = await fetch('/api/attachments/reassociate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              organizationId,
+              temporaryOwnerId: tempInvoiceId,
+              temporaryOwnerType: 'pending_customer_invoice',
+              actualOwnerId: data.data.id,
+              actualOwnerType: 'customer_invoice',
+            }),
+          });
+
+          const reassociateResult = await reassociateResponse.json();
+          console.log('🔄 Reassociate result:', reassociateResult);
+        } catch (error) {
+          console.error('Failed to reassociate attachments:', error);
+        }
+      }
+
       toast({
         title: "Success",
         description: "Customer invoice created successfully",
@@ -108,6 +144,7 @@ export function CreateCustomerInvoiceDialog({
       setInvoiceDate(new Date());
       setAmount("");
       setSelectedSoId("");
+      setAttachmentRefresh(prev => prev + 1);
       
       onSuccess();
       onOpenChange(false);
@@ -203,6 +240,33 @@ export function CreateCustomerInvoiceDialog({
               placeholder="e.g., 40000"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Invoice Documents</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Upload invoice copy, supporting documents (Images, PDFs, Word/Excel files)
+            </p>
+            <FileUpload
+              organizationId={organizationId}
+              ownerType="pending_customer_invoice"
+              ownerId={tempInvoiceId}
+              uploadedBy={userId}
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+              maxSizeMB={10}
+              multiple={true}
+              showPreview={true}
+              onUploadComplete={() => setAttachmentRefresh(prev => prev + 1)}
+            />
+            <div className="mt-2">
+              <AttachmentList
+                ownerType="pending_customer_invoice"
+                ownerId={tempInvoiceId}
+                organizationId={organizationId}
+                allowDelete={true}
+                refreshTrigger={attachmentRefresh}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

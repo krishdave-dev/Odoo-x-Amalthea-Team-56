@@ -17,6 +17,7 @@ interface TaskCardProps {
   projectName: string;
   status?: string;
   taskId?: number;
+  images?: string[];
 }
 
 const priorityColors = {
@@ -47,6 +48,7 @@ export function TaskCard({
   projectName,
   status,
   taskId,
+  images = [],
 }: TaskCardProps) {
   const overdue = isOverdue(dueDate);
 
@@ -72,6 +74,20 @@ export function TaskCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Task Images */}
+        {images && images.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {images.slice(0, 3).map((imgUrl, idx) => (
+              <img
+                key={idx}
+                src={imgUrl}
+                alt={`Task image ${idx + 1}`}
+                className="h-20 w-20 object-cover rounded-md border flex-shrink-0"
+              />
+            ))}
+          </div>
+        )}
+        
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <AlertCircle className="h-3 w-3" />
           <span>{projectName}</span>

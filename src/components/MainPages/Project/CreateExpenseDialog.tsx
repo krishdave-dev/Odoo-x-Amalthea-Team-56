@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X } from "lucide-react";
+import { FileUpload } from "@/components/ui/file-upload";
+import { AttachmentList } from "@/components/ui/attachment-list";
 
 interface CreateExpenseDialogProps {
   open: boolean;
@@ -31,27 +32,13 @@ export function CreateExpenseDialog({
   const [amount, setAmount] = useState("");
   const [billable, setBillable] = useState(false);
   const [note, setNote] = useState("");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachmentRefresh, setAttachmentRefresh] = useState(0);
+  
+  // Generate temporary ID for pending expense
+  const [tempExpenseId] = useState(() => -Math.floor(Math.random() * 1000000));
+  
   const { toast } = useToast();
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setReceiptFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setReceiptPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveFile = () => {
-    setReceiptFile(null);
-    setReceiptPreview(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +57,7 @@ export function CreateExpenseDialog({
     try {
       const isManagerOrAdmin = userRole === "manager" || userRole === "admin";
       
-      // For now, we'll create without receipt upload
-      // In production, you'd upload to Cloudinary first
+      // Create expense
       const response = await fetch("/api/expenses", {
         method: "POST",
         headers: {
@@ -85,7 +71,6 @@ export function CreateExpenseDialog({
           billable,
           note: note.trim() || undefined,
           autoApprove: isManagerOrAdmin, // Managers and admins auto-approve
-          // receiptUrl would be added after Cloudinary upload
         }),
       });
 
@@ -95,6 +80,31 @@ export function CreateExpenseDialog({
       }
 
       const data = await response.json();
+
+      // Reassociate attachments from temporary ID to actual expense ID
+      if (data.success && data.data?.id) {
+        console.log('🔄 Reassociating expense attachments from temp ID:', tempExpenseId, 'to expense ID:', data.data.id);
+        
+        try {
+          const reassociateResponse = await fetch('/api/attachments/reassociate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              organizationId,
+              temporaryOwnerId: tempExpenseId,
+              temporaryOwnerType: 'pending_expense',
+              actualOwnerId: data.data.id,
+              actualOwnerType: 'expense',
+            }),
+          });
+
+          const reassociateResult = await reassociateResponse.json();
+          console.log('🔄 Reassociate result:', reassociateResult);
+        } catch (error) {
+          console.error('Failed to reassociate attachments:', error);
+        }
+      }
 
       // Show success message based on role
       const successMessage = isManagerOrAdmin
@@ -110,8 +120,7 @@ export function CreateExpenseDialog({
       setAmount("");
       setBillable(false);
       setNote("");
-      setReceiptFile(null);
-      setReceiptPreview(null);
+      setAttachmentRefresh(prev => prev + 1);
       
       onSuccess();
       onOpenChange(false);
@@ -182,44 +191,30 @@ export function CreateExpenseDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Receipt / Proof (Optional)</Label>
-            {receiptPreview ? (
-              <div className="relative inline-block">
-                <img
-                  src={receiptPreview}
-                  alt="Receipt preview"
-                  className="h-32 w-auto rounded-md border object-cover"
-                />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  className="absolute -top-2 -right-2 h-6 w-6"
-                  onClick={handleRemoveFile}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <Button type="button" variant="outline" asChild className="h-10">
-                  <label htmlFor="receipt-file" className="cursor-pointer inline-flex items-center gap-2">
-                    <Upload className="h-4 w-4" />
-                    Upload Receipt
-                    <input
-                      id="receipt-file"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                  </label>
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Upload image of receipt
-                </span>
-              </div>
-            )}
+            <Label>Receipts & Documents</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Upload receipts, invoices, or supporting documents (Images, PDFs, Word/Excel files)
+            </p>
+            <FileUpload
+              organizationId={organizationId}
+              ownerType="pending_expense"
+              ownerId={tempExpenseId}
+              uploadedBy={userId}
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+              maxSizeMB={10}
+              multiple={true}
+              showPreview={true}
+              onUploadComplete={() => setAttachmentRefresh(prev => prev + 1)}
+            />
+            <div className="mt-2">
+              <AttachmentList
+                ownerType="pending_expense"
+                ownerId={tempExpenseId}
+                organizationId={organizationId}
+                allowDelete={true}
+                refreshTrigger={attachmentRefresh}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

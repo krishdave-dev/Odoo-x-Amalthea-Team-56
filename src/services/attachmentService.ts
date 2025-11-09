@@ -123,7 +123,7 @@ export class AttachmentService {
           fileName,
           mimeType,
           fileSize,
-          cloudUrl,
+          fileUrl: cloudUrl,
           cloudPublicId,
           backupData,
           backupType,
@@ -185,7 +185,7 @@ export class AttachmentService {
       fileName: attachment.fileName,
       fileSize: attachment.fileSize,
       mimeType: attachment.mimeType,
-      cloudUrl: attachment.cloudUrl,
+      cloudUrl: attachment.fileUrl,
       backupAvailable: attachment.backupAvailable,
       status: attachment.status,
     }
@@ -336,7 +336,7 @@ export class AttachmentService {
         fileName: true,
         mimeType: true,
         fileSize: true,
-        cloudUrl: true,
+        fileUrl: true,
         backupAvailable: true,
         status: true,
         uploadedAt: true,
@@ -421,7 +421,7 @@ export class AttachmentService {
       await prisma.attachment.update({
         where: { id },
         data: {
-          cloudUrl: uploadResult.secure_url,
+          fileUrl: uploadResult.secure_url,
           cloudPublicId: uploadResult.public_id,
           status: 'active',
           lastVerifiedAt: new Date(),
@@ -432,6 +432,70 @@ export class AttachmentService {
     } catch (error) {
       console.error(`Retry upload failed for ${id}:`, error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  }
+
+  /**
+   * Reassociate pending attachments with actual owner after entity creation
+   * Used for linking attachments uploaded during creation flow
+   */
+  async reassociateAttachments(
+    organizationId: number,
+    temporaryOwnerId: number,
+    temporaryOwnerType: string,
+    actualOwnerId: number,
+    actualOwnerType: string
+  ) {
+    try {
+      // Find all attachments with the temporary owner
+      const attachments = await prisma.attachment.findMany({
+        where: {
+          organizationId,
+          ownerType: temporaryOwnerType,
+          ownerId: temporaryOwnerId,
+          status: { in: ['active', 'pending_upload'] },
+        },
+      })
+
+      if (attachments.length === 0) {
+        return { updated: 0, attachmentIds: [] }
+      }
+
+      // Update all matching attachments to the actual owner
+      const result = await prisma.attachment.updateMany({
+        where: {
+          organizationId,
+          ownerType: temporaryOwnerType,
+          ownerId: temporaryOwnerId,
+          status: { in: ['active', 'pending_upload'] },
+        },
+        data: {
+          ownerType: actualOwnerType,
+          ownerId: actualOwnerId,
+        },
+      })
+
+      // Create audit event
+      await createAuditEvent(
+        organizationId,
+        'Attachment',
+        actualOwnerId,
+        'REASSOCIATE',
+        {
+          from: { ownerType: temporaryOwnerType, ownerId: temporaryOwnerId },
+          to: { ownerType: actualOwnerType, ownerId: actualOwnerId },
+          count: result.count,
+          attachmentIds: attachments.map((att: { id: number }) => att.id),
+        }
+      )
+
+      return {
+        updated: result.count,
+        attachmentIds: attachments.map((att: { id: number }) => att.id),
+      }
+    } catch (error) {
+      console.error('Failed to reassociate attachments:', error)
+      throw error
     }
   }
 }

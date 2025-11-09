@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { FileUpload } from "@/components/ui/file-upload";
+import { AttachmentList } from "@/components/ui/attachment-list";
 
 interface PurchaseOrder {
   id: number;
@@ -25,6 +27,7 @@ interface CreateVendorBillDialogProps {
   onOpenChange: (open: boolean) => void;
   projectId: number;
   organizationId: number;
+  userId: number;
   purchaseOrders?: PurchaseOrder[];
   onSuccess: () => void;
 }
@@ -34,6 +37,7 @@ export function CreateVendorBillDialog({
   onOpenChange,
   projectId,
   organizationId,
+  userId,
   purchaseOrders = [],
   onSuccess,
 }: CreateVendorBillDialogProps) {
@@ -42,6 +46,11 @@ export function CreateVendorBillDialog({
   const [amount, setAmount] = useState("");
   const [selectedPoId, setSelectedPoId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachmentRefresh, setAttachmentRefresh] = useState(0);
+  
+  // Generate temporary ID for pending bill
+  const [tempBillId] = useState(() => -Math.floor(Math.random() * 1000000));
+  
   const { toast } = useToast();
 
   // Auto-fill vendor name and amount when purchase order is selected
@@ -93,6 +102,33 @@ export function CreateVendorBillDialog({
         throw new Error(errorData.error || "Failed to create vendor bill");
       }
 
+      const data = await response.json();
+
+      // Reassociate attachments from temporary ID to actual bill ID
+      if (data.success && data.data?.id) {
+        console.log('🔄 Reassociating bill attachments from temp ID:', tempBillId, 'to bill ID:', data.data.id);
+        
+        try {
+          const reassociateResponse = await fetch('/api/attachments/reassociate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              organizationId,
+              temporaryOwnerId: tempBillId,
+              temporaryOwnerType: 'pending_vendor_bill',
+              actualOwnerId: data.data.id,
+              actualOwnerType: 'vendor_bill',
+            }),
+          });
+
+          const reassociateResult = await reassociateResponse.json();
+          console.log('🔄 Reassociate result:', reassociateResult);
+        } catch (error) {
+          console.error('Failed to reassociate attachments:', error);
+        }
+      }
+
       toast({
         title: "Success",
         description: "Vendor bill created successfully",
@@ -103,6 +139,7 @@ export function CreateVendorBillDialog({
       setBillDate(new Date());
       setAmount("");
       setSelectedPoId("");
+      setAttachmentRefresh(prev => prev + 1);
       
       onSuccess();
       onOpenChange(false);
@@ -196,6 +233,33 @@ export function CreateVendorBillDialog({
               placeholder="e.g., 12000"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Bill Documents</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Upload vendor bill, receipts, supporting documents (Images, PDFs, Word/Excel files)
+            </p>
+            <FileUpload
+              organizationId={organizationId}
+              ownerType="pending_vendor_bill"
+              ownerId={tempBillId}
+              uploadedBy={userId}
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+              maxSizeMB={10}
+              multiple={true}
+              showPreview={true}
+              onUploadComplete={() => setAttachmentRefresh(prev => prev + 1)}
+            />
+            <div className="mt-2">
+              <AttachmentList
+                ownerType="pending_vendor_bill"
+                ownerId={tempBillId}
+                organizationId={organizationId}
+                allowDelete={true}
+                refreshTrigger={attachmentRefresh}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

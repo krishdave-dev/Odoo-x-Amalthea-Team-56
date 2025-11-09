@@ -9,10 +9,13 @@ import { handleError } from '@/lib/error'
 import { z } from 'zod'
 import { idSchema } from '@/lib/validation'
 
+// Allow negative IDs for pending entities (e.g., pending_project)
+const ownerIdSchema = z.coerce.number().int()
+
 const uploadSchema = z.object({
   organizationId: idSchema,
   ownerType: z.string().min(1, 'Owner type is required').max(50),
-  ownerId: idSchema,
+  ownerId: ownerIdSchema,
   uploadedBy: idSchema.optional(),
 })
 

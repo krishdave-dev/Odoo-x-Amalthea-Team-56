@@ -126,6 +126,57 @@ export class ProjectService {
       prisma.project.count({ where }),
     ])
 
+    // Fetch attachments for each project (images only for display)
+    const projectIds = data.map((p: any) => p.id)
+    
+    // First, let's debug what attachments exist for this organization
+    const allAttachments = await prisma.attachment.findMany({
+      where: {
+        organizationId: orgId,
+      },
+      select: {
+        id: true,
+        ownerId: true,
+        ownerType: true,
+        fileUrl: true,
+        fileName: true,
+        status: true,
+        mimeType: true,
+      },
+    })
+    console.log('🔍 All attachments in org:', allAttachments)
+    
+    const attachments = await prisma.attachment.findMany({
+      where: {
+        ownerType: 'project',
+        ownerId: { in: projectIds },
+        status: 'active',
+        mimeType: { startsWith: 'image/' },
+      },
+      select: {
+        id: true,
+        ownerId: true,
+        fileUrl: true,
+        fileName: true,
+      },
+      take: 3, // Limit to first 3 images per project for card display
+    })
+
+    // Group attachments by project ID
+    const attachmentsByProject = attachments.reduce((acc: any, att: any) => {
+      if (!acc[att.ownerId]) {
+        acc[att.ownerId] = []
+      }
+      // Only add if fileUrl is not null
+      if (acc[att.ownerId].length < 3 && att.fileUrl) {
+        acc[att.ownerId].push(att.fileUrl)
+      }
+      return acc
+    }, {})
+
+    console.log('📷 Attachments fetched:', attachments.length, 'attachments')
+    console.log('📷 Grouped by project:', attachmentsByProject)
+
     // Calculate actual costs for each project
     const projectsWithCalculatedCosts = data.map((project: any) => {
       const purchaseOrdersCost = project.purchaseOrders.reduce((sum: number, po: any) => sum + Number(po.totalAmount), 0)
@@ -136,6 +187,7 @@ export class ProjectService {
       return {
         ...project,
         cachedCost: actualCost,
+        images: attachmentsByProject[project.id] || [], // Add project images
       }
     })
 

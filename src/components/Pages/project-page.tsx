@@ -54,6 +54,7 @@ interface Project {
     members: number;
   };
   tasks?: Array<{ id: number }>;
+  images?: string[]; // Array of attachment URLs
 }
 
 interface PaginatedResponse {
@@ -401,7 +402,7 @@ export function ProjectPage() {
               projectId={project.id}
               title={project.name}
               tags={[project.status]}
-              images={[]}
+              images={project.images || []}
               deadline={project.endDate ? format(new Date(project.endDate), "MMM dd, yyyy") : undefined}
               managerName={project.projectManager?.name || project.projectManager?.email || "Unassigned"}
               managerAvatar={undefined}
@@ -424,7 +425,7 @@ export function ProjectPage() {
               projectId={project.id}
               title={project.name}
               tags={[project.status]}
-              images={[]}
+              images={project.images || []}
               deadline={project.endDate ? format(new Date(project.endDate), "MMM dd, yyyy") : undefined}
               managerName={project.projectManager?.name || project.projectManager?.email || "Unassigned"}
               managerAvatar={undefined}
