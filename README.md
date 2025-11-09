@@ -1,6 +1,6 @@
 # OneFlow - Project Management & Resource Planning Platform
 
-> **Video Demo**: [Add your project video link here]
+> **Video Demo**: https://drive.google.com/file/d/1131-3joS2tiDGqO1pOi0flN4wpPQjWLR/view?usp=drive_link
 
 ## 📋 Overview
 
