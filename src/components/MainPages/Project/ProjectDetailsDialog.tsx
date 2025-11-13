@@ -136,8 +136,11 @@ export function ProjectDetailsDialog({
   const { user } = useAuth();
 
   // Check if user can manage finance documents (admin, manager, finance)
-  const canManageFinance = user?.role === "admin" || user?.role === "manager" || user?.role === "finance";
-  
+  const canManageFinance =
+    user?.role === "admin" ||
+    user?.role === "manager" ||
+    user?.role === "finance";
+
   // Check if user can approve expenses (admin, manager)
   const canApproveExpenses = user?.role === "admin" || user?.role === "manager";
 
@@ -180,7 +183,9 @@ export function ProjectDetailsDialog({
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">{projectName}</DialogTitle>
-          <p className="text-sm text-muted-foreground">Project Links & Financial Documents</p>
+          <p className="text-sm text-muted-foreground">
+            Project Links & Financial Documents
+          </p>
         </DialogHeader>
 
         {loading ? (
@@ -192,445 +197,577 @@ export function ProjectDetailsDialog({
             {/* Financial Overview */}
             <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg mb-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Total Revenue
+                </p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(
-                    links.salesOrders.reduce((sum, so) => sum + so.totalAmount, 0) +
-                    links.expenses
-                      .filter((exp) => exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                      .reduce((sum, exp) => sum + exp.amount, 0)
+                    links.salesOrders.reduce(
+                      (sum, so) => sum + so.totalAmount,
+                      0
+                    ) +
+                      links.expenses
+                        .filter(
+                          (exp) =>
+                            exp.billable &&
+                            (exp.status === "approved" || exp.status === "paid")
+                        )
+                        .reduce((sum, exp) => sum + exp.amount, 0)
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {links.salesOrders.length} Sales Orders + {links.expenses.filter(e => e.billable && (e.status === "approved" || e.status === "paid")).length} Billable Expenses
+                  {links.salesOrders.length} Sales Orders +{" "}
+                  {
+                    links.expenses.filter(
+                      (e) =>
+                        e.billable &&
+                        (e.status === "approved" || e.status === "paid")
+                    ).length
+                  }{" "}
+                  Billable Expenses
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-1">Total Costs</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Total Costs
+                </p>
                 <p className="text-2xl font-bold text-red-600">
                   {formatCurrency(
-                    links.purchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0) +
-                    links.bills.reduce((sum, bill) => sum + bill.amount, 0) +
-                    links.expenses
-                      .filter((exp) => !exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                      .reduce((sum, exp) => sum + exp.amount, 0)
+                    links.purchaseOrders.reduce(
+                      (sum, po) => sum + po.totalAmount,
+                      0
+                    ) +
+                      links.bills.reduce((sum, bill) => sum + bill.amount, 0) +
+                      links.expenses
+                        .filter(
+                          (exp) =>
+                            !exp.billable &&
+                            (exp.status === "approved" || exp.status === "paid")
+                        )
+                        .reduce((sum, exp) => sum + exp.amount, 0)
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {links.purchaseOrders.length} POs + {links.bills.length} Bills + {links.expenses.filter(e => !e.billable && (e.status === "approved" || e.status === "paid")).length} Non-billable Expenses
+                  {links.purchaseOrders.length} POs + {links.bills.length} Bills
+                  +{" "}
+                  {
+                    links.expenses.filter(
+                      (e) =>
+                        !e.billable &&
+                        (e.status === "approved" || e.status === "paid")
+                    ).length
+                  }{" "}
+                  Non-billable Expenses
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-1">Net Profit</p>
-                <p className={`text-2xl font-bold ${
-                  (links.salesOrders.reduce((sum, so) => sum + so.totalAmount, 0) +
-                  links.expenses
-                    .filter((exp) => exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                    .reduce((sum, exp) => sum + exp.amount, 0) -
-                  (links.purchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0) +
-                  links.bills.reduce((sum, bill) => sum + bill.amount, 0) +
-                  links.expenses
-                    .filter((exp) => !exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                    .reduce((sum, exp) => sum + exp.amount, 0))) >= 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                }`}>
+                <p
+                  className={`text-2xl font-bold ${
+                    links.salesOrders.reduce(
+                      (sum, so) => sum + so.totalAmount,
+                      0
+                    ) +
+                      links.expenses
+                        .filter(
+                          (exp) =>
+                            exp.billable &&
+                            (exp.status === "approved" || exp.status === "paid")
+                        )
+                        .reduce((sum, exp) => sum + exp.amount, 0) -
+                      (links.purchaseOrders.reduce(
+                        (sum, po) => sum + po.totalAmount,
+                        0
+                      ) +
+                        links.bills.reduce(
+                          (sum, bill) => sum + bill.amount,
+                          0
+                        ) +
+                        links.expenses
+                          .filter(
+                            (exp) =>
+                              !exp.billable &&
+                              (exp.status === "approved" ||
+                                exp.status === "paid")
+                          )
+                          .reduce((sum, exp) => sum + exp.amount, 0)) >=
+                    0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
                   {formatCurrency(
-                    links.salesOrders.reduce((sum, so) => sum + so.totalAmount, 0) +
-                    links.expenses
-                      .filter((exp) => exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                      .reduce((sum, exp) => sum + exp.amount, 0) -
-                    (links.purchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0) +
-                    links.bills.reduce((sum, bill) => sum + bill.amount, 0) +
-                    links.expenses
-                      .filter((exp) => !exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                      .reduce((sum, exp) => sum + exp.amount, 0))
+                    links.salesOrders.reduce(
+                      (sum, so) => sum + so.totalAmount,
+                      0
+                    ) +
+                      links.expenses
+                        .filter(
+                          (exp) =>
+                            exp.billable &&
+                            (exp.status === "approved" || exp.status === "paid")
+                        )
+                        .reduce((sum, exp) => sum + exp.amount, 0) -
+                      (links.purchaseOrders.reduce(
+                        (sum, po) => sum + po.totalAmount,
+                        0
+                      ) +
+                        links.bills.reduce(
+                          (sum, bill) => sum + bill.amount,
+                          0
+                        ) +
+                        links.expenses
+                          .filter(
+                            (exp) =>
+                              !exp.billable &&
+                              (exp.status === "approved" ||
+                                exp.status === "paid")
+                          )
+                          .reduce((sum, exp) => sum + exp.amount, 0))
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Revenue - Costs</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Revenue - Costs
+                </p>
               </div>
             </div>
 
             <Tabs defaultValue="salesOrders" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="salesOrders" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Sales Orders</span>
-                <Badge variant="secondary" className="ml-1">
-                  {links.salesOrders.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="purchaseOrders" className="flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                <span className="hidden sm:inline">Purchase Orders</span>
-                <Badge variant="secondary" className="ml-1">
-                  {links.purchaseOrders.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="invoices" className="flex items-center gap-2">
-                <Receipt className="h-4 w-4" />
-                <span className="hidden sm:inline">Invoices</span>
-                <Badge variant="secondary" className="ml-1">
-                  {links.invoices.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="bills" className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                <span className="hidden sm:inline">Bills</span>
-                <Badge variant="secondary" className="ml-1">
-                  {links.bills.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="expenses" className="flex items-center gap-2">
-                <Receipt className="h-4 w-4" />
-                <span className="hidden sm:inline">Expenses</span>
-                <Badge variant="secondary" className="ml-1">
-                  {links.expenses.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Sales Orders */}
-            <TabsContent value="salesOrders" className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Sales Orders</h3>
-                {canManageFinance && (
-                  <Button onClick={() => setCreateSOOpen(true)} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Sales Order
-                  </Button>
-                )}
-              </div>
-              {links.salesOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <FileText className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No sales orders linked to this project</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {links.salesOrders.map((so) => (
-                    <div
-                      key={so.id}
-                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">{so.soNumber}</h4>
-                            <Badge className={getStatusColor(so.status)}>
-                              {so.status}
-                            </Badge>
-                          </div>
-                          {so.partnerName && (
-                            <p className="text-sm text-muted-foreground">
-                              Customer: {so.partnerName}
-                            </p>
-                          )}
-                          <p className="text-sm text-muted-foreground">
-                            Date: {format(new Date(so.orderDate), "MMM dd, yyyy")}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">{formatCurrency(so.totalAmount)}</p>
-                          <Button variant="ghost" size="sm" className="mt-2">
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Purchase Orders */}
-            <TabsContent value="purchaseOrders" className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Purchase Orders</h3>
-                {canManageFinance && (
-                  <Button onClick={() => setCreatePOOpen(true)} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Purchase Order
-                  </Button>
-                )}
-              </div>
-              {links.purchaseOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <ShoppingCart className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No purchase orders linked to this project</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {links.purchaseOrders.map((po) => (
-                    <div
-                      key={po.id}
-                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">{po.poNumber}</h4>
-                            <Badge className={getStatusColor(po.status)}>
-                              {po.status}
-                            </Badge>
-                          </div>
-                          {po.vendorName && (
-                            <p className="text-sm text-muted-foreground">
-                              Vendor: {po.vendorName}
-                            </p>
-                          )}
-                          <p className="text-sm text-muted-foreground">
-                            Date: {format(new Date(po.orderDate), "MMM dd, yyyy")}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">{formatCurrency(po.totalAmount)}</p>
-                          <Button variant="ghost" size="sm" className="mt-2">
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Customer Invoices */}
-            <TabsContent value="invoices" className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Customer Invoices</h3>
-                {canManageFinance && (
-                  <Button onClick={() => setCreateInvoiceOpen(true)} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Invoice
-                  </Button>
-                )}
-              </div>
-              {links.invoices.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Receipt className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No customer invoices linked to this project</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {links.invoices.map((invoice) => (
-                    <div
-                      key={invoice.id}
-                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">{invoice.invoiceNumber}</h4>
-                            <Badge className={getStatusColor(invoice.status)}>
-                              {invoice.status}
-                            </Badge>
-                          </div>
-                          {invoice.salesOrder && (
-                            <p className="text-sm text-muted-foreground">
-                              Linked to SO: {invoice.salesOrder.soNumber}
-                            </p>
-                          )}
-                          <p className="text-sm text-muted-foreground">
-                            Date: {format(new Date(invoice.invoiceDate), "MMM dd, yyyy")}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">{formatCurrency(invoice.amount)}</p>
-                          <Button variant="ghost" size="sm" className="mt-2">
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Vendor Bills */}
-            <TabsContent value="bills" className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Vendor Bills</h3>
-                {canManageFinance && (
-                  <Button onClick={() => setCreateBillOpen(true)} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Bill
-                  </Button>
-                )}
-              </div>
-              {links.bills.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No vendor bills linked to this project</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {links.bills.map((bill) => (
-                    <div
-                      key={bill.id}
-                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">
-                              {bill.vendorName || "Unknown Vendor"}
-                            </h4>
-                            <Badge className={getStatusColor(bill.status)}>
-                              {bill.status}
-                            </Badge>
-                          </div>
-                          {bill.purchaseOrder && (
-                            <p className="text-sm text-muted-foreground">
-                              Linked to PO: {bill.purchaseOrder.poNumber}
-                            </p>
-                          )}
-                          <p className="text-sm text-muted-foreground">
-                            Date: {format(new Date(bill.billDate), "MMM dd, yyyy")}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">{formatCurrency(bill.amount)}</p>
-                          <Button variant="ghost" size="sm" className="mt-2">
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Expenses */}
-            <TabsContent value="expenses" className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Expenses</h3>
-                <Button 
-                  onClick={() => {
-                    // All roles: show choice between custom and OCR
-                    setCreateExpenseChoiceOpen(true);
-                  }} 
-                  size="sm"
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger
+                  value="salesOrders"
+                  className="flex items-center gap-2"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Expense
-                </Button>
-              </div>
-              {links.expenses.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Receipt className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No expenses linked to this project</p>
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sales Orders</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {links.salesOrders.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="purchaseOrders"
+                  className="flex items-center gap-2"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  <span className="hidden sm:inline">Purchase Orders</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {links.purchaseOrders.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="invoices"
+                  className="flex items-center gap-2"
+                >
+                  <Receipt className="h-4 w-4" />
+                  <span className="hidden sm:inline">Invoices</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {links.invoices.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="bills" className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="hidden sm:inline">Bills</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {links.bills.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="expenses"
+                  className="flex items-center gap-2"
+                >
+                  <Receipt className="h-4 w-4" />
+                  <span className="hidden sm:inline">Expenses</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {links.expenses.length}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Sales Orders */}
+              <TabsContent value="salesOrders" className="mt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Sales Orders</h3>
+                  {canManageFinance && (
+                    <Button onClick={() => setCreateSOOpen(true)} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Sales Order
+                    </Button>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {links.expenses.map((expense) => (
-                    <div
-                      key={expense.id}
-                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">
-                              {expense.user?.name || "Unknown User"}
-                            </h4>
-                            <Badge className={getStatusColor(expense.status)}>
-                              {expense.status}
-                            </Badge>
-                            {expense.billable && (
-                              <Badge variant="outline" className="bg-blue-50">
-                                Billable
+                {links.salesOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mb-4 opacity-20" />
+                    <p>No sales orders linked to this project</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {links.salesOrders.map((so) => (
+                      <div
+                        key={so.id}
+                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">{so.soNumber}</h4>
+                              <Badge className={getStatusColor(so.status)}>
+                                {so.status}
                               </Badge>
-                            )}
-                          </div>
-                          {expense.note && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">
-                              {expense.note}
-                            </p>
-                          )}
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(expense.createdAt), "MMM dd, yyyy")}
-                          </p>
-                        </div>
-                        <div className="text-right flex flex-col items-end gap-2">
-                          <p className="text-lg font-bold">{formatCurrency(expense.amount)}</p>
-                          {canApproveExpenses && expense.status === "submitted" && (
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch(
-                                      `/api/expenses/${expense.id}/approve?organizationId=${organizationId}`,
-                                      { method: "POST" }
-                                    );
-                                    if (!response.ok) throw new Error("Failed to approve");
-                                    toast({ title: "Success", description: "Expense approved" });
-                                    fetchProjectLinks();
-                                  } catch (error) {
-                                    toast({ 
-                                      title: "Error", 
-                                      description: "Failed to approve expense",
-                                      variant: "destructive" 
-                                    });
-                                  }
-                                }}
-                              >
-                                Approve
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch(
-                                      `/api/expenses/${expense.id}/reject?organizationId=${organizationId}`,
-                                      { 
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ reason: "Rejected by manager" })
-                                      }
-                                    );
-                                    if (!response.ok) throw new Error("Failed to reject");
-                                    toast({ title: "Success", description: "Expense rejected" });
-                                    fetchProjectLinks();
-                                  } catch (error) {
-                                    toast({ 
-                                      title: "Error", 
-                                      description: "Failed to reject expense",
-                                      variant: "destructive" 
-                                    });
-                                  }
-                                }}
-                              >
-                                Reject
-                              </Button>
                             </div>
-                          )}
-                          {(expense.status === "approved" || expense.status === "paid" || expense.status === "rejected" || expense.status === "draft") && (
-                            <Button variant="ghost" size="sm">
+                            {so.partnerName && (
+                              <p className="text-sm text-muted-foreground">
+                                Customer: {so.partnerName}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                              Date:{" "}
+                              {format(new Date(so.orderDate), "MMM dd, yyyy")}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold">
+                              {formatCurrency(so.totalAmount)}
+                            </p>
+                            <Button variant="ghost" size="sm" className="mt-2">
                               <ExternalLink className="h-4 w-4 mr-1" />
                               View
                             </Button>
-                          )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Purchase Orders */}
+              <TabsContent value="purchaseOrders" className="mt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Purchase Orders</h3>
+                  {canManageFinance && (
+                    <Button onClick={() => setCreatePOOpen(true)} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Purchase Order
+                    </Button>
+                  )}
                 </div>
-              )}
-            </TabsContent>
-          </Tabs>
+                {links.purchaseOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <ShoppingCart className="h-12 w-12 mb-4 opacity-20" />
+                    <p>No purchase orders linked to this project</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {links.purchaseOrders.map((po) => (
+                      <div
+                        key={po.id}
+                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">{po.poNumber}</h4>
+                              <Badge className={getStatusColor(po.status)}>
+                                {po.status}
+                              </Badge>
+                            </div>
+                            {po.vendorName && (
+                              <p className="text-sm text-muted-foreground">
+                                Vendor: {po.vendorName}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                              Date:{" "}
+                              {format(new Date(po.orderDate), "MMM dd, yyyy")}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold">
+                              {formatCurrency(po.totalAmount)}
+                            </p>
+                            <Button variant="ghost" size="sm" className="mt-2">
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Customer Invoices */}
+              <TabsContent value="invoices" className="mt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Customer Invoices</h3>
+                  {canManageFinance && (
+                    <Button
+                      onClick={() => setCreateInvoiceOpen(true)}
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Invoice
+                    </Button>
+                  )}
+                </div>
+                {links.invoices.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Receipt className="h-12 w-12 mb-4 opacity-20" />
+                    <p>No customer invoices linked to this project</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {links.invoices.map((invoice) => (
+                      <div
+                        key={invoice.id}
+                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">
+                                {invoice.invoiceNumber}
+                              </h4>
+                              <Badge className={getStatusColor(invoice.status)}>
+                                {invoice.status}
+                              </Badge>
+                            </div>
+                            {invoice.salesOrder && (
+                              <p className="text-sm text-muted-foreground">
+                                Linked to SO: {invoice.salesOrder.soNumber}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                              Date:{" "}
+                              {format(
+                                new Date(invoice.invoiceDate),
+                                "MMM dd, yyyy"
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold">
+                              {formatCurrency(invoice.amount)}
+                            </p>
+                            <Button variant="ghost" size="sm" className="mt-2">
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Vendor Bills */}
+              <TabsContent value="bills" className="mt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Vendor Bills</h3>
+                  {canManageFinance && (
+                    <Button onClick={() => setCreateBillOpen(true)} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Bill
+                    </Button>
+                  )}
+                </div>
+                {links.bills.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <DollarSign className="h-12 w-12 mb-4 opacity-20" />
+                    <p>No vendor bills linked to this project</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {links.bills.map((bill) => (
+                      <div
+                        key={bill.id}
+                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">
+                                {bill.vendorName || "Unknown Vendor"}
+                              </h4>
+                              <Badge className={getStatusColor(bill.status)}>
+                                {bill.status}
+                              </Badge>
+                            </div>
+                            {bill.purchaseOrder && (
+                              <p className="text-sm text-muted-foreground">
+                                Linked to PO: {bill.purchaseOrder.poNumber}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                              Date:{" "}
+                              {format(new Date(bill.billDate), "MMM dd, yyyy")}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold">
+                              {formatCurrency(bill.amount)}
+                            </p>
+                            <Button variant="ghost" size="sm" className="mt-2">
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Expenses */}
+              <TabsContent value="expenses" className="mt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Expenses</h3>
+                  <Button
+                    onClick={() => {
+                      // All roles: show choice between custom and OCR
+                      setCreateExpenseChoiceOpen(true);
+                    }}
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Expense
+                  </Button>
+                </div>
+                {links.expenses.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Receipt className="h-12 w-12 mb-4 opacity-20" />
+                    <p>No expenses linked to this project</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {links.expenses.map((expense) => (
+                      <div
+                        key={expense.id}
+                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">
+                                {expense.user?.name || "Unknown User"}
+                              </h4>
+                              <Badge className={getStatusColor(expense.status)}>
+                                {expense.status}
+                              </Badge>
+                              {expense.billable && (
+                                <Badge variant="outline" className="bg-blue-50">
+                                  Billable
+                                </Badge>
+                              )}
+                            </div>
+                            {expense.note && (
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {expense.note}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                              {format(
+                                new Date(expense.createdAt),
+                                "MMM dd, yyyy"
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-right flex flex-col items-end gap-2">
+                            <p className="text-lg font-bold">
+                              {formatCurrency(expense.amount)}
+                            </p>
+                            {canApproveExpenses &&
+                              expense.status === "submitted" && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(
+                                          `/api/expenses/${expense.id}/approve?organizationId=${organizationId}`,
+                                          { method: "POST" }
+                                        );
+                                        if (!response.ok)
+                                          throw new Error("Failed to approve");
+                                        toast({
+                                          title: "Success",
+                                          description: "Expense approved",
+                                        });
+                                        fetchProjectLinks();
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description:
+                                            "Failed to approve expense",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(
+                                          `/api/expenses/${expense.id}/reject?organizationId=${organizationId}`,
+                                          {
+                                            method: "POST",
+                                            headers: {
+                                              "Content-Type":
+                                                "application/json",
+                                            },
+                                            body: JSON.stringify({
+                                              reason: "Rejected by manager",
+                                            }),
+                                          }
+                                        );
+                                        if (!response.ok)
+                                          throw new Error("Failed to reject");
+                                        toast({
+                                          title: "Success",
+                                          description: "Expense rejected",
+                                        });
+                                        fetchProjectLinks();
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description:
+                                            "Failed to reject expense",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )}
+                            {(expense.status === "approved" ||
+                              expense.status === "paid" ||
+                              expense.status === "rejected" ||
+                              expense.status === "draft") && (
+                              <Button variant="ghost" size="sm">
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -669,10 +806,10 @@ export function ProjectDetailsDialog({
         projectId={projectId}
         organizationId={organizationId}
         userId={user?.id || 0}
-        salesOrders={links?.salesOrders.map(so => ({
+        salesOrders={links?.salesOrders.map((so) => ({
           id: so.id,
           soNumber: so.soNumber,
-          totalAmount: so.totalAmount
+          totalAmount: so.totalAmount,
         }))}
         onSuccess={() => {
           fetchProjectLinks();
@@ -686,11 +823,11 @@ export function ProjectDetailsDialog({
         projectId={projectId}
         organizationId={organizationId}
         userId={user?.id || 0}
-        purchaseOrders={links?.purchaseOrders.map(po => ({
+        purchaseOrders={links?.purchaseOrders.map((po) => ({
           id: po.id,
           poNumber: po.poNumber,
           vendorName: po.vendorName || undefined,
-          totalAmount: po.totalAmount
+          totalAmount: po.totalAmount,
         }))}
         onSuccess={() => {
           fetchProjectLinks();
