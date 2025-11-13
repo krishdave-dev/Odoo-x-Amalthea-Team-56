@@ -46,6 +46,8 @@ import { CreatePurchaseOrderDialog } from "@/components/MainPages/Project/Create
 import { CreateCustomerInvoiceDialog } from "@/components/MainPages/Project/CreateCustomerInvoiceDialog";
 import { CreateVendorBillDialog } from "@/components/MainPages/Project/CreateVendorBillDialog";
 import { CreateExpenseDialog } from "@/components/MainPages/Project/CreateExpenseDialog";
+import { CreateExpenseChoiceDialog } from "@/components/MainPages/ExpenseOCR/CreateExpenseChoiceDialog";
+import { OcrExpenseDialog } from "@/components/MainPages/ExpenseOCR/OcrExpenseDialog";
 import { CreateTaskDialog } from "@/components/MainPages/Project/CreateTaskDialog";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -229,7 +231,7 @@ export default function ProjectDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = parseInt(params.id as string);
-  
+
   const [project, setProject] = useState<Project | null>(null);
   const [links, setLinks] = useState<ProjectLinks | null>(null);
   const [loading, setLoading] = useState(true);
@@ -239,20 +241,25 @@ export default function ProjectDetailsPage() {
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [createBillOpen, setCreateBillOpen] = useState(false);
   const [createExpenseOpen, setCreateExpenseOpen] = useState(false);
-  
+  const [createExpenseChoiceOpen, setCreateExpenseChoiceOpen] = useState(false);
+  const [createExpenseOcrOpen, setCreateExpenseOcrOpen] = useState(false);
+
   // Task filtering and pagination state
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>("all");
   const [taskPriorityFilter, setTaskPriorityFilter] = useState<string>("all");
   const [taskPage, setTaskPage] = useState(1);
   const tasksPerPage = 5;
-  
+
   const { toast } = useToast();
   const { user } = useAuth();
 
   // Check if user can manage finance documents (admin, manager, finance)
-  const canManageFinance = user?.role === "admin" || user?.role === "manager" || user?.role === "finance";
-  
+  const canManageFinance =
+    user?.role === "admin" ||
+    user?.role === "manager" ||
+    user?.role === "finance";
+
   // Check if user can approve expenses (admin, manager)
   const canApproveExpenses = user?.role === "admin" || user?.role === "manager";
 
@@ -264,15 +271,19 @@ export default function ProjectDetailsPage() {
       fetchProjectDetails();
       fetchProjectLinks();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, user?.organizationId]);
 
   const fetchProjectDetails = async () => {
     if (!user?.organizationId) return;
-    
+
     try {
-      const response = await fetch(`/api/projects/${projectId}?organizationId=${user.organizationId}`, {
-        credentials: "include",
-      });
+      const response = await fetch(
+        `/api/projects/${projectId}?organizationId=${user.organizationId}`,
+        {
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch project details");
@@ -292,7 +303,7 @@ export default function ProjectDetailsPage() {
 
   const fetchProjectLinks = async () => {
     if (!user?.organizationId) return;
-    
+
     setLoading(true);
     try {
       const response = await fetch(
@@ -323,17 +334,22 @@ export default function ProjectDetailsPage() {
   // Filter and paginate tasks
   const filteredTasks = React.useMemo(() => {
     if (!links?.tasks) return [];
-    
+
     return links.tasks.filter((task) => {
       // Search filter
-      const matchesSearch = task.title.toLowerCase().includes(taskSearchQuery.toLowerCase());
-      
+      const matchesSearch = task.title
+        .toLowerCase()
+        .includes(taskSearchQuery.toLowerCase());
+
       // Status filter
-      const matchesStatus = taskStatusFilter === "all" || task.status === taskStatusFilter;
-      
+      const matchesStatus =
+        taskStatusFilter === "all" || task.status === taskStatusFilter;
+
       // Priority filter
-      const matchesPriority = taskPriorityFilter === "all" || task.priority.toString() === taskPriorityFilter;
-      
+      const matchesPriority =
+        taskPriorityFilter === "all" ||
+        task.priority.toString() === taskPriorityFilter;
+
       return matchesSearch && matchesStatus && matchesPriority;
     });
   }, [links?.tasks, taskSearchQuery, taskStatusFilter, taskPriorityFilter]);
@@ -369,7 +385,9 @@ export default function ProjectDetailsPage() {
         <div className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-16 w-16 mb-4 text-muted-foreground" />
           <h2 className="text-2xl font-bold mb-2">Project Not Found</h2>
-          <p className="text-muted-foreground mb-4">The project you're looking for doesn't exist.</p>
+          <p className="text-muted-foreground mb-4">
+            The project you&apos;re looking for doesn&apos;t exist.
+          </p>
           <Button onClick={() => router.push("/")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Home
@@ -392,7 +410,7 @@ export default function ProjectDetailsPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Projects
         </Button>
-        
+
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
@@ -407,7 +425,8 @@ export default function ProjectDetailsPage() {
             </div>
             {project?.code && (
               <p className="text-sm text-muted-foreground mb-1">
-                Project Code: <span className="font-mono font-medium">{project.code}</span>
+                Project Code:{" "}
+                <span className="font-mono font-medium">{project.code}</span>
               </p>
             )}
             {project?.description && (
@@ -440,7 +459,9 @@ export default function ProjectDetailsPage() {
                     <span>Project Manager</span>
                   </div>
                   <p className="font-medium">
-                    {project?.projectManager?.name || project?.projectManager?.email || "Unassigned"}
+                    {project?.projectManager?.name ||
+                      project?.projectManager?.email ||
+                      "Unassigned"}
                   </p>
                 </div>
 
@@ -451,7 +472,8 @@ export default function ProjectDetailsPage() {
                     <span>Team Members</span>
                   </div>
                   <p className="font-medium">
-                    {project?._count?.members || project?.members?.length || 0} members
+                    {project?._count?.members || project?.members?.length || 0}{" "}
+                    members
                   </p>
                 </div>
 
@@ -462,7 +484,7 @@ export default function ProjectDetailsPage() {
                     <span>Created</span>
                   </div>
                   <p className="font-medium">
-                    {project?.createdAt 
+                    {project?.createdAt
                       ? format(new Date(project.createdAt), "MMM dd, yyyy")
                       : "N/A"}
                   </p>
@@ -549,7 +571,9 @@ export default function ProjectDetailsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Budget */}
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Total Budget</p>
+                    <p className="text-sm text-muted-foreground">
+                      Total Budget
+                    </p>
                     <p className="text-2xl font-bold text-blue-600">
                       {formatCurrency(Number(project.budget))}
                     </p>
@@ -567,29 +591,44 @@ export default function ProjectDetailsPage() {
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Remaining</p>
                     <p className="text-2xl font-bold text-green-600">
-                      {formatCurrency(Number(project.budget) - Number(project.cachedCost || 0))}
+                      {formatCurrency(
+                        Number(project.budget) - Number(project.cachedCost || 0)
+                      )}
                     </p>
                   </div>
 
                   {/* Budget Progress */}
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Budget Utilized</p>
+                    <p className="text-sm text-muted-foreground">
+                      Budget Utilized
+                    </p>
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {Math.round((Number(project.cachedCost || 0) / Number(project.budget)) * 100)}%
+                        {Math.round(
+                          (Number(project.cachedCost || 0) /
+                            Number(project.budget)) *
+                            100
+                        )}
+                        %
                       </p>
                       <div className="w-full bg-neutral-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all ${
-                            (Number(project.cachedCost || 0) / Number(project.budget)) > 1
+                            Number(project.cachedCost || 0) /
+                              Number(project.budget) >
+                            1
                               ? "bg-red-600"
-                              : (Number(project.cachedCost || 0) / Number(project.budget)) > 0.8
+                              : Number(project.cachedCost || 0) /
+                                  Number(project.budget) >
+                                0.8
                               ? "bg-amber-600"
                               : "bg-blue-600"
                           }`}
                           style={{
                             width: `${Math.min(
-                              (Number(project.cachedCost || 0) / Number(project.budget)) * 100,
+                              (Number(project.cachedCost || 0) /
+                                Number(project.budget)) *
+                                100,
                               100
                             )}%`,
                           }}
@@ -610,62 +649,147 @@ export default function ProjectDetailsPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center p-6 bg-green-50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-2">Total Revenue</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Total Revenue
+                  </p>
                   <p className="text-3xl font-bold text-green-600">
                     {formatCurrency(
-                      links.salesOrders.reduce((sum, so) => sum + so.totalAmount, 0) +
-                      links.expenses
-                        .filter((exp) => exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                        .reduce((sum, exp) => sum + exp.amount, 0)
+                      links.salesOrders.reduce(
+                        (sum, so) => sum + so.totalAmount,
+                        0
+                      ) +
+                        links.expenses
+                          .filter(
+                            (exp) =>
+                              exp.billable &&
+                              (exp.status === "approved" ||
+                                exp.status === "paid")
+                          )
+                          .reduce((sum, exp) => sum + exp.amount, 0)
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {links.salesOrders.length} Sales Orders + {links.expenses.filter(e => e.billable && (e.status === "approved" || e.status === "paid")).length} Billable Expenses
+                    {links.salesOrders.length} Sales Orders +{" "}
+                    {
+                      links.expenses.filter(
+                        (e) =>
+                          e.billable &&
+                          (e.status === "approved" || e.status === "paid")
+                      ).length
+                    }{" "}
+                    Billable Expenses
                   </p>
                 </div>
                 <div className="text-center p-6 bg-red-50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-2">Total Costs</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Total Costs
+                  </p>
                   <p className="text-3xl font-bold text-red-600">
                     {formatCurrency(
-                      links.purchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0) +
-                      links.bills.reduce((sum, bill) => sum + bill.amount, 0) +
-                      links.expenses
-                        .filter((exp) => !exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                        .reduce((sum, exp) => sum + exp.amount, 0)
+                      links.purchaseOrders.reduce(
+                        (sum, po) => sum + po.totalAmount,
+                        0
+                      ) +
+                        links.bills.reduce(
+                          (sum, bill) => sum + bill.amount,
+                          0
+                        ) +
+                        links.expenses
+                          .filter(
+                            (exp) =>
+                              !exp.billable &&
+                              (exp.status === "approved" ||
+                                exp.status === "paid")
+                          )
+                          .reduce((sum, exp) => sum + exp.amount, 0)
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {links.purchaseOrders.length} POs + {links.bills.length} Bills + {links.expenses.filter(e => !e.billable && (e.status === "approved" || e.status === "paid")).length} Non-billable Expenses
+                    {links.purchaseOrders.length} POs + {links.bills.length}{" "}
+                    Bills +{" "}
+                    {
+                      links.expenses.filter(
+                        (e) =>
+                          !e.billable &&
+                          (e.status === "approved" || e.status === "paid")
+                      ).length
+                    }{" "}
+                    Non-billable Expenses
                   </p>
                 </div>
                 <div className="text-center p-6 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-2">Net Profit</p>
-                  <p className={`text-3xl font-bold ${
-                    (links.salesOrders.reduce((sum, so) => sum + so.totalAmount, 0) +
-                    links.expenses
-                      .filter((exp) => exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                      .reduce((sum, exp) => sum + exp.amount, 0) -
-                    (links.purchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0) +
-                    links.bills.reduce((sum, bill) => sum + bill.amount, 0) +
-                    links.expenses
-                      .filter((exp) => !exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                      .reduce((sum, exp) => sum + exp.amount, 0))) >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Net Profit
+                  </p>
+                  <p
+                    className={`text-3xl font-bold ${
+                      links.salesOrders.reduce(
+                        (sum, so) => sum + so.totalAmount,
+                        0
+                      ) +
+                        links.expenses
+                          .filter(
+                            (exp) =>
+                              exp.billable &&
+                              (exp.status === "approved" ||
+                                exp.status === "paid")
+                          )
+                          .reduce((sum, exp) => sum + exp.amount, 0) -
+                        (links.purchaseOrders.reduce(
+                          (sum, po) => sum + po.totalAmount,
+                          0
+                        ) +
+                          links.bills.reduce(
+                            (sum, bill) => sum + bill.amount,
+                            0
+                          ) +
+                          links.expenses
+                            .filter(
+                              (exp) =>
+                                !exp.billable &&
+                                (exp.status === "approved" ||
+                                  exp.status === "paid")
+                            )
+                            .reduce((sum, exp) => sum + exp.amount, 0)) >=
+                      0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
                     {formatCurrency(
-                      links.salesOrders.reduce((sum, so) => sum + so.totalAmount, 0) +
-                      links.expenses
-                        .filter((exp) => exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                        .reduce((sum, exp) => sum + exp.amount, 0) -
-                      (links.purchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0) +
-                      links.bills.reduce((sum, bill) => sum + bill.amount, 0) +
-                      links.expenses
-                        .filter((exp) => !exp.billable && (exp.status === "approved" || exp.status === "paid"))
-                        .reduce((sum, exp) => sum + exp.amount, 0))
+                      links.salesOrders.reduce(
+                        (sum, so) => sum + so.totalAmount,
+                        0
+                      ) +
+                        links.expenses
+                          .filter(
+                            (exp) =>
+                              exp.billable &&
+                              (exp.status === "approved" ||
+                                exp.status === "paid")
+                          )
+                          .reduce((sum, exp) => sum + exp.amount, 0) -
+                        (links.purchaseOrders.reduce(
+                          (sum, po) => sum + po.totalAmount,
+                          0
+                        ) +
+                          links.bills.reduce(
+                            (sum, bill) => sum + bill.amount,
+                            0
+                          ) +
+                          links.expenses
+                            .filter(
+                              (exp) =>
+                                !exp.billable &&
+                                (exp.status === "approved" ||
+                                  exp.status === "paid")
+                            )
+                            .reduce((sum, exp) => sum + exp.amount, 0))
                     )}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-2">Revenue - Costs</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Revenue - Costs
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -687,7 +811,7 @@ export default function ProjectDetailsPage() {
                       key={member.user.id}
                       className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                      <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
                         {member.user.name
                           ? member.user.name
                               .split(" ")
@@ -719,42 +843,60 @@ export default function ProjectDetailsPage() {
             <CardContent className="pt-6">
               <Tabs defaultValue="tasks" className="w-full">
                 <TabsList className="grid w-full grid-cols-6 mb-6">
-                  <TabsTrigger value="tasks" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="tasks"
+                    className="flex items-center gap-2"
+                  >
                     <ListTodo className="h-4 w-4" />
                     <span className="hidden sm:inline">Tasks</span>
                     <Badge variant="secondary" className="ml-1">
                       {links.tasks.length}
                     </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="salesOrders" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="salesOrders"
+                    className="flex items-center gap-2"
+                  >
                     <FileText className="h-4 w-4" />
                     <span className="hidden sm:inline">Sales Orders</span>
                     <Badge variant="secondary" className="ml-1">
                       {links.salesOrders.length}
                     </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="purchaseOrders" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="purchaseOrders"
+                    className="flex items-center gap-2"
+                  >
                     <ShoppingCart className="h-4 w-4" />
                     <span className="hidden sm:inline">Purchase Orders</span>
                     <Badge variant="secondary" className="ml-1">
                       {links.purchaseOrders.length}
                     </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="invoices" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="invoices"
+                    className="flex items-center gap-2"
+                  >
                     <Receipt className="h-4 w-4" />
                     <span className="hidden sm:inline">Invoices</span>
                     <Badge variant="secondary" className="ml-1">
                       {links.invoices.length}
                     </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="bills" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="bills"
+                    className="flex items-center gap-2"
+                  >
                     <DollarSign className="h-4 w-4" />
                     <span className="hidden sm:inline">Bills</span>
                     <Badge variant="secondary" className="ml-1">
                       {links.bills.length}
                     </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="expenses" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="expenses"
+                    className="flex items-center gap-2"
+                  >
                     <Receipt className="h-4 w-4" />
                     <span className="hidden sm:inline">Expenses</span>
                     <Badge variant="secondary" className="ml-1">
@@ -766,7 +908,9 @@ export default function ProjectDetailsPage() {
                 {/* Tasks */}
                 <TabsContent value="tasks">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Tasks ({filteredTasks.length})</h3>
+                    <h3 className="text-lg font-semibold">
+                      Tasks ({filteredTasks.length})
+                    </h3>
                     {canCreateTasks && (
                       <Button onClick={() => setCreateTaskOpen(true)} size="sm">
                         <Plus className="h-4 w-4 mr-2" />
@@ -786,8 +930,11 @@ export default function ProjectDetailsPage() {
                         className="pl-10"
                       />
                     </div>
-                    
-                    <Select value={taskStatusFilter} onValueChange={setTaskStatusFilter}>
+
+                    <Select
+                      value={taskStatusFilter}
+                      onValueChange={setTaskStatusFilter}
+                    >
                       <SelectTrigger>
                         <div className="flex items-center gap-2">
                           <Filter className="h-4 w-4" />
@@ -804,7 +951,10 @@ export default function ProjectDetailsPage() {
                       </SelectContent>
                     </Select>
 
-                    <Select value={taskPriorityFilter} onValueChange={setTaskPriorityFilter}>
+                    <Select
+                      value={taskPriorityFilter}
+                      onValueChange={setTaskPriorityFilter}
+                    >
                       <SelectTrigger>
                         <div className="flex items-center gap-2">
                           <Filter className="h-4 w-4" />
@@ -825,8 +975,8 @@ export default function ProjectDetailsPage() {
                     <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                       <ListTodo className="h-12 w-12 mb-4 opacity-20" />
                       <p>
-                        {links.tasks.length === 0 
-                          ? "No tasks in this project" 
+                        {links.tasks.length === 0
+                          ? "No tasks in this project"
                           : "No tasks match your filters"}
                       </p>
                     </div>
@@ -842,24 +992,35 @@ export default function ProjectDetailsPage() {
                             <div className="flex items-start justify-between">
                               <div className="space-y-1 flex-1">
                                 <div className="flex items-center gap-2">
-                                  <h4 className="font-semibold">{task.title}</h4>
-                                  <Badge className={getStatusColor(task.status)}>
+                                  <h4 className="font-semibold">
+                                    {task.title}
+                                  </h4>
+                                  <Badge
+                                    className={getStatusColor(task.status)}
+                                  >
                                     {task.status.replace(/_/g, " ")}
                                   </Badge>
-                                  <Badge className={getPriorityColor(task.priority)}>
+                                  <Badge
+                                    className={getPriorityColor(task.priority)}
+                                  >
                                     {getPriorityLabel(task.priority)}
                                   </Badge>
                                 </div>
                                 {task.assignee && (
                                   <p className="text-sm text-muted-foreground">
-                                    Assigned to: {task.assignee.name || "Unknown User"}
+                                    Assigned to:{" "}
+                                    {task.assignee.name || "Unknown User"}
                                   </p>
                                 )}
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                   {task.dueDate && (
                                     <div className="flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
-                                      Due: {format(new Date(task.dueDate), "MMM dd, yyyy")}
+                                      Due:{" "}
+                                      {format(
+                                        new Date(task.dueDate),
+                                        "MMM dd, yyyy"
+                                      )}
                                     </div>
                                   )}
                                   {task.hoursLogged > 0 && (
@@ -870,7 +1031,11 @@ export default function ProjectDetailsPage() {
                                   )}
                                 </div>
                               </div>
-                              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <ExternalLink className="h-4 w-4 mr-1" />
                                 View
                               </Button>
@@ -883,9 +1048,12 @@ export default function ProjectDetailsPage() {
                       {totalTaskPages > 1 && (
                         <div className="flex items-center justify-between mt-6">
                           <div className="text-sm text-muted-foreground">
-                            Showing {((taskPage - 1) * tasksPerPage) + 1} to{" "}
-                            {Math.min(taskPage * tasksPerPage, filteredTasks.length)} of{" "}
-                            {filteredTasks.length} tasks
+                            Showing {(taskPage - 1) * tasksPerPage + 1} to{" "}
+                            {Math.min(
+                              taskPage * tasksPerPage,
+                              filteredTasks.length
+                            )}{" "}
+                            of {filteredTasks.length} tasks
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
@@ -898,10 +1066,15 @@ export default function ProjectDetailsPage() {
                               Previous
                             </Button>
                             <div className="flex items-center gap-1">
-                              {Array.from({ length: totalTaskPages }, (_, i) => i + 1).map((page) => (
+                              {Array.from(
+                                { length: totalTaskPages },
+                                (_, i) => i + 1
+                              ).map((page) => (
                                 <Button
                                   key={page}
-                                  variant={page === taskPage ? "default" : "outline"}
+                                  variant={
+                                    page === taskPage ? "default" : "outline"
+                                  }
                                   size="sm"
                                   onClick={() => setTaskPage(page)}
                                   className="w-10"
@@ -963,12 +1136,19 @@ export default function ProjectDetailsPage() {
                                 </p>
                               )}
                               <p className="text-sm text-muted-foreground">
-                                Date: {format(new Date(so.orderDate), "MMM dd, yyyy")}
+                                Date:{" "}
+                                {format(new Date(so.orderDate), "MMM dd, yyyy")}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-lg font-bold">{formatCurrency(so.totalAmount)}</p>
-                              <Button variant="ghost" size="sm" className="mt-2">
+                              <p className="text-lg font-bold">
+                                {formatCurrency(so.totalAmount)}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-2"
+                              >
                                 <ExternalLink className="h-4 w-4 mr-1" />
                                 View
                               </Button>
@@ -1017,12 +1197,19 @@ export default function ProjectDetailsPage() {
                                 </p>
                               )}
                               <p className="text-sm text-muted-foreground">
-                                Date: {format(new Date(po.orderDate), "MMM dd, yyyy")}
+                                Date:{" "}
+                                {format(new Date(po.orderDate), "MMM dd, yyyy")}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-lg font-bold">{formatCurrency(po.totalAmount)}</p>
-                              <Button variant="ghost" size="sm" className="mt-2">
+                              <p className="text-lg font-bold">
+                                {formatCurrency(po.totalAmount)}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-2"
+                              >
                                 <ExternalLink className="h-4 w-4 mr-1" />
                                 View
                               </Button>
@@ -1039,7 +1226,10 @@ export default function ProjectDetailsPage() {
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold">Customer Invoices</h3>
                     {canManageFinance && (
-                      <Button onClick={() => setCreateInvoiceOpen(true)} size="sm">
+                      <Button
+                        onClick={() => setCreateInvoiceOpen(true)}
+                        size="sm"
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Create Invoice
                       </Button>
@@ -1060,8 +1250,12 @@ export default function ProjectDetailsPage() {
                           <div className="flex items-start justify-between">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <h4 className="font-semibold">{invoice.invoiceNumber}</h4>
-                                <Badge className={getStatusColor(invoice.status)}>
+                                <h4 className="font-semibold">
+                                  {invoice.invoiceNumber}
+                                </h4>
+                                <Badge
+                                  className={getStatusColor(invoice.status)}
+                                >
                                   {invoice.status}
                                 </Badge>
                               </div>
@@ -1071,12 +1265,22 @@ export default function ProjectDetailsPage() {
                                 </p>
                               )}
                               <p className="text-sm text-muted-foreground">
-                                Date: {format(new Date(invoice.invoiceDate), "MMM dd, yyyy")}
+                                Date:{" "}
+                                {format(
+                                  new Date(invoice.invoiceDate),
+                                  "MMM dd, yyyy"
+                                )}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-lg font-bold">{formatCurrency(invoice.amount)}</p>
-                              <Button variant="ghost" size="sm" className="mt-2">
+                              <p className="text-lg font-bold">
+                                {formatCurrency(invoice.amount)}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-2"
+                              >
                                 <ExternalLink className="h-4 w-4 mr-1" />
                                 View
                               </Button>
@@ -1127,12 +1331,22 @@ export default function ProjectDetailsPage() {
                                 </p>
                               )}
                               <p className="text-sm text-muted-foreground">
-                                Date: {format(new Date(bill.billDate), "MMM dd, yyyy")}
+                                Date:{" "}
+                                {format(
+                                  new Date(bill.billDate),
+                                  "MMM dd, yyyy"
+                                )}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-lg font-bold">{formatCurrency(bill.amount)}</p>
-                              <Button variant="ghost" size="sm" className="mt-2">
+                              <p className="text-lg font-bold">
+                                {formatCurrency(bill.amount)}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-2"
+                              >
                                 <ExternalLink className="h-4 w-4 mr-1" />
                                 View
                               </Button>
@@ -1148,8 +1362,15 @@ export default function ProjectDetailsPage() {
                 <TabsContent value="expenses">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold">Expenses</h3>
-                    <Button 
-                      onClick={() => setCreateExpenseOpen(true)} 
+                    <Button
+                      onClick={() => {
+                        // Member-only: show choice between custom and OCR
+                        if (user?.role === "member") {
+                          setCreateExpenseChoiceOpen(true);
+                        } else {
+                          setCreateExpenseOpen(true);
+                        }
+                      }}
                       size="sm"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -1174,11 +1395,16 @@ export default function ProjectDetailsPage() {
                                 <h4 className="font-semibold">
                                   {expense.user?.name || "Unknown User"}
                                 </h4>
-                                <Badge className={getStatusColor(expense.status)}>
+                                <Badge
+                                  className={getStatusColor(expense.status)}
+                                >
                                   {expense.status}
                                 </Badge>
                                 {expense.billable && (
-                                  <Badge variant="outline" className="bg-blue-50">
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-blue-50"
+                                  >
                                     Billable
                                   </Badge>
                                 )}
@@ -1189,68 +1415,94 @@ export default function ProjectDetailsPage() {
                                 </p>
                               )}
                               <p className="text-sm text-muted-foreground">
-                                {format(new Date(expense.createdAt), "MMM dd, yyyy")}
+                                {format(
+                                  new Date(expense.createdAt),
+                                  "MMM dd, yyyy"
+                                )}
                               </p>
                             </div>
                             <div className="text-right flex flex-col items-end gap-2">
-                              <p className="text-lg font-bold">{formatCurrency(expense.amount)}</p>
-                              {canApproveExpenses && expense.status === "submitted" && (
-                                <div className="flex gap-2">
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                    onClick={async () => {
-                                      try {
-                                        const response = await fetch(
-                                          `/api/expenses/${expense.id}/approve?organizationId=${user?.organizationId}`,
-                                          { method: "POST" }
-                                        );
-                                        if (!response.ok) throw new Error("Failed to approve");
-                                        toast({ title: "Success", description: "Expense approved" });
-                                        fetchProjectLinks();
-                                      } catch (error) {
-                                        toast({ 
-                                          title: "Error", 
-                                          description: "Failed to approve expense",
-                                          variant: "destructive" 
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    Approve
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={async () => {
-                                      try {
-                                        const response = await fetch(
-                                          `/api/expenses/${expense.id}/reject?organizationId=${user?.organizationId}`,
-                                          { 
-                                            method: "POST",
-                                            headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify({ reason: "Rejected by manager" })
-                                          }
-                                        );
-                                        if (!response.ok) throw new Error("Failed to reject");
-                                        toast({ title: "Success", description: "Expense rejected" });
-                                        fetchProjectLinks();
-                                      } catch (error) {
-                                        toast({ 
-                                          title: "Error", 
-                                          description: "Failed to reject expense",
-                                          variant: "destructive" 
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    Reject
-                                  </Button>
-                                </div>
-                              )}
-                              {(expense.status === "approved" || expense.status === "paid" || expense.status === "rejected" || expense.status === "draft") && (
+                              <p className="text-lg font-bold">
+                                {formatCurrency(expense.amount)}
+                              </p>
+                              {canApproveExpenses &&
+                                expense.status === "submitted" && (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                      onClick={async () => {
+                                        try {
+                                          const response = await fetch(
+                                            `/api/expenses/${expense.id}/approve?organizationId=${user?.organizationId}`,
+                                            { method: "POST" }
+                                          );
+                                          if (!response.ok)
+                                            throw new Error(
+                                              "Failed to approve"
+                                            );
+                                          toast({
+                                            title: "Success",
+                                            description: "Expense approved",
+                                          });
+                                          fetchProjectLinks();
+                                        } catch {
+                                          toast({
+                                            title: "Error",
+                                            description:
+                                              "Failed to approve expense",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      onClick={async () => {
+                                        try {
+                                          const response = await fetch(
+                                            `/api/expenses/${expense.id}/reject?organizationId=${user?.organizationId}`,
+                                            {
+                                              method: "POST",
+                                              headers: {
+                                                "Content-Type":
+                                                  "application/json",
+                                              },
+                                              body: JSON.stringify({
+                                                reason: "Rejected by manager",
+                                              }),
+                                            }
+                                          );
+                                          if (!response.ok)
+                                            throw new Error("Failed to reject");
+                                          toast({
+                                            title: "Success",
+                                            description: "Expense rejected",
+                                          });
+                                          fetchProjectLinks();
+                                        } catch {
+                                          toast({
+                                            title: "Error",
+                                            description:
+                                              "Failed to reject expense",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Reject
+                                    </Button>
+                                  </div>
+                                )}
+                              {(expense.status === "approved" ||
+                                expense.status === "paid" ||
+                                expense.status === "rejected" ||
+                                expense.status === "draft") && (
                                 <Button variant="ghost" size="sm">
                                   <ExternalLink className="h-4 w-4 mr-1" />
                                   View
@@ -1277,6 +1529,20 @@ export default function ProjectDetailsPage() {
       {/* Create Dialogs */}
       {project && user && (
         <>
+          {/* Member-only choice dialog */}
+          <CreateExpenseChoiceDialog
+            open={createExpenseChoiceOpen}
+            onOpenChange={setCreateExpenseChoiceOpen}
+            onChoose={(mode) => {
+              setCreateExpenseChoiceOpen(false);
+              if (mode === "custom") {
+                setCreateExpenseOpen(true);
+              } else {
+                setCreateExpenseOcrOpen(true);
+              }
+            }}
+          />
+
           <CreateSalesOrderDialog
             open={createSOOpen}
             onOpenChange={setCreateSOOpen}
@@ -1299,10 +1565,10 @@ export default function ProjectDetailsPage() {
             projectId={projectId}
             organizationId={user.organizationId}
             userId={user.id}
-            salesOrders={links?.salesOrders.map(so => ({
+            salesOrders={links?.salesOrders.map((so) => ({
               id: so.id,
               soNumber: so.soNumber,
-              totalAmount: so.totalAmount
+              totalAmount: so.totalAmount,
             }))}
             onSuccess={fetchProjectLinks}
           />
@@ -1313,11 +1579,11 @@ export default function ProjectDetailsPage() {
             projectId={projectId}
             organizationId={user.organizationId}
             userId={user.id}
-            purchaseOrders={links?.purchaseOrders.map(po => ({
+            purchaseOrders={links?.purchaseOrders.map((po) => ({
               id: po.id,
               poNumber: po.poNumber,
               vendorName: po.vendorName || undefined,
-              totalAmount: po.totalAmount
+              totalAmount: po.totalAmount,
             }))}
             onSuccess={fetchProjectLinks}
           />
@@ -1329,6 +1595,16 @@ export default function ProjectDetailsPage() {
             organizationId={user.organizationId}
             userId={user.id}
             userRole={user.role}
+            onSuccess={fetchProjectLinks}
+          />
+
+          {/* OCR flow dialog (member feature) */}
+          <OcrExpenseDialog
+            open={createExpenseOcrOpen}
+            onOpenChange={setCreateExpenseOcrOpen}
+            projectId={projectId}
+            organizationId={user.organizationId}
+            userId={user.id}
             onSuccess={fetchProjectLinks}
           />
 
