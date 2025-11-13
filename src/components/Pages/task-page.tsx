@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { TaskCard } from "@/components/MainPages/Task/TaskCard";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,6 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  Search,
+  X,
 } from "lucide-react";
 import { StatsCards } from "@/components/MainPages/Stats/StatsCards";
 import {
@@ -136,7 +139,6 @@ export function TaskPage() {
   }, [currentUser?.organizationId]);
 
   const allTasks = tasksState;
-  const totalPages = Math.ceil(allTasks.length / itemsPerPage);
 
   const filterCounts = useMemo(() => {
     const assignees = new Set(allTasks.map((t) => t.assignedTo)).size;
@@ -154,6 +156,25 @@ export function TaskPage() {
   const [deadlineFilter, setDeadlineFilter] = useState<
     "all" | "next7" | "overdue"
   >("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  
+  // State for expanded status groups in list view
+  const [expandedStatuses, setExpandedStatuses] = useState<{
+    new: boolean;
+    in_progress: boolean;
+    completed: boolean;
+  }>({
+    new: false,
+    in_progress: false,
+    completed: false,
+  });
+  
+  const toggleStatusExpanded = (status: 'new' | 'in_progress' | 'completed') => {
+    setExpandedStatuses(prev => ({
+      ...prev,
+      [status]: !prev[status]
+    }));
+  };
 
   const uniqueAssignees = useMemo(() => {
     return Array.from(new Set(allTasks.map((t) => t.assignedTo)));
@@ -186,6 +207,7 @@ export function TaskPage() {
     setSelectedPriorities([]);
     setSelectedProjects([]);
     setDeadlineFilter("all");
+    setSearchQuery("");
   };
 
   const parseDueDate = (d?: string) => {
@@ -195,6 +217,20 @@ export function TaskPage() {
   };
 
   const matchesFilters = (task: TaskModel) => {
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesTitle = task.title.toLowerCase().includes(query);
+      const matchesDescription = task.description?.toLowerCase().includes(query);
+      const matchesAssignee = task.assignedTo.toLowerCase().includes(query);
+      const matchesProject = task.projectName.toLowerCase().includes(query);
+      const matchesTags = task.tags?.some(tag => tag.toLowerCase().includes(query));
+      
+      if (!matchesTitle && !matchesDescription && !matchesAssignee && !matchesProject && !matchesTags) {
+        return false;
+      }
+    }
+    
     if (
       selectedAssignees.length &&
       !selectedAssignees.includes(task.assignedTo)
@@ -283,41 +319,135 @@ export function TaskPage() {
     ...filteredCompleted,
   ];
 
-  const PaginationControls = () => (
-    <div className="flex items-center justify-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-        disabled={currentPage === 1}
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Previous
-      </Button>
-      <div className="flex items-center gap-1">
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+  // Reset to page 1 when filters change or view changes
+  useEffect(() => {
+    setCurrentPage(1);
+    // Reset expanded states when switching to list view
+    if (view === 'list') {
+      setExpandedStatuses({
+        new: false,
+        in_progress: false,
+        completed: false,
+      });
+    }
+  }, [selectedAssignees, selectedPriorities, selectedProjects, deadlineFilter, searchQuery, view]);
+  
+  // Pagination settings
+  const tasksPerColumnKanban = 5; // Max 5 tasks per column in kanban view
+  const tasksPerStatusList = 3; // Show 3 tasks per status in list view initially
+  
+  // Apply pagination based on view type
+  let paginatedFilteredNew: TaskModel[];
+  let paginatedFilteredInProgress: TaskModel[];
+  let paginatedFilteredCompleted: TaskModel[];
+  let totalPages: number;
+  let startIndex: number;
+  let endIndex: number;
+  let totalFilteredTasks: number;
+  
+  if (view === "kanban") {
+    // Kanban view: 5 tasks per column per page
+    const startIdx = (currentPage - 1) * tasksPerColumnKanban;
+    const endIdx = startIdx + tasksPerColumnKanban;
+    
+    paginatedFilteredNew = filteredNew.slice(startIdx, endIdx);
+    paginatedFilteredInProgress = filteredInProgress.slice(startIdx, endIdx);
+    paginatedFilteredCompleted = filteredCompleted.slice(startIdx, endIdx);
+    
+    // Calculate total pages based on the column with most tasks
+    const maxColumnTasks = Math.max(
+      filteredNew.length,
+      filteredInProgress.length,
+      filteredCompleted.length
+    );
+    totalPages = Math.ceil(maxColumnTasks / tasksPerColumnKanban);
+    
+    // For display purposes
+    totalFilteredTasks = filteredAll.length;
+    startIndex = startIdx;
+    endIndex = Math.min(
+      startIdx + tasksPerColumnKanban,
+      maxColumnTasks
+    );
+  } else {
+    // List view: Show 3 tasks per status, with expand functionality
+    paginatedFilteredNew = expandedStatuses.new 
+      ? filteredNew 
+      : filteredNew.slice(0, tasksPerStatusList);
+    
+    paginatedFilteredInProgress = expandedStatuses.in_progress
+      ? filteredInProgress
+      : filteredInProgress.slice(0, tasksPerStatusList);
+    
+    paginatedFilteredCompleted = expandedStatuses.completed
+      ? filteredCompleted
+      : filteredCompleted.slice(0, tasksPerStatusList);
+    
+    // For list view, pagination is handled by expand/collapse
+    totalFilteredTasks = filteredAll.length;
+    totalPages = 1; // No pagination in list view, only expand/collapse
+    startIndex = 0;
+    endIndex = totalFilteredTasks;
+  }
+
+  const PaginationControls = () => {
+    const displayText = view === "kanban"
+      ? `Page ${currentPage} of ${totalPages} (${totalFilteredTasks} total tasks, max 5 per column)`
+      : `Showing ${totalFilteredTasks > 0 ? startIndex + 1 : 0} - ${Math.min(endIndex, totalFilteredTasks)} of ${totalFilteredTasks} tasks`;
+    
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div className="text-xs text-muted-foreground">
+          {displayText}
+        </div>
+        <div className="flex items-center justify-center gap-1">
           <Button
-            key={page}
-            variant={currentPage === page ? "default" : "outline"}
+            variant="outline"
             size="sm"
-            onClick={() => setCurrentPage(page)}
-            className="w-9"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1 || totalPages === 0}
+            className="h-7 px-2"
           >
-            {page}
+            <ChevronLeft className="h-3 w-3" />
           </Button>
-        ))}
+          <div className="flex items-center gap-0.5">
+            {totalPages > 0 && Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
+              // Show first 3, last 3, and pages around current
+              const page = i + 1;
+              const showPage = page <= 3 || page > totalPages - 3 || Math.abs(page - currentPage) <= 1;
+              
+              if (!showPage && (page === 4 || page === totalPages - 3)) {
+                return <span key={page} className="px-1 text-xs text-muted-foreground">...</span>;
+              }
+              
+              if (!showPage) return null;
+              
+              return (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                  className="h-7 w-7 p-0 text-xs"
+                >
+                  {page}
+                </Button>
+              );
+            })}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className="h-7 px-2"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-        disabled={currentPage === totalPages}
-      >
-        Next
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -334,6 +464,26 @@ export function TaskPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Search Bar */}
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-9 h-9 border-[#B3CFE5]"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="border-[#B3CFE5]">
@@ -474,7 +624,11 @@ export function TaskPage() {
       </div>
 
       {/* Stats Metrics */}
-      <StatsCards data={kpiMetrics} className="mb-6" />
+      <StatsCards 
+        data={kpiMetrics} 
+        className="mb-6" 
+        userRole={currentUser?.role as 'admin' | 'manager' | 'member'}
+      />
 
       {/* View Toggle and Pagination */}
       <div className="mb-6 flex items-center justify-between">
@@ -496,7 +650,7 @@ export function TaskPage() {
             List
           </Button>
         </div>
-        <PaginationControls />
+        {view === "kanban" && <PaginationControls />}
       </div>
 
       {/* Loading / Error States */}
@@ -519,13 +673,15 @@ export function TaskPage() {
               </h2>
             </div>
             <div className="space-y-3">
-              {filteredNew.map((task) => (
+              {paginatedFilteredNew.map((task) => (
                 <div key={task.id} className="space-y-2">
                   <TaskCard
                     title={task.title}
                     description={task.description || ''}
                     priority={task.priority}
                     assignedTo={task.assignedTo}
+                    assignedBy={task.assignedBy}
+                    tags={task.tags}
                     dueDate={task.dueDate}
                     projectName={task.projectName}
                     status={task.status}
@@ -572,13 +728,15 @@ export function TaskPage() {
               </h2>
             </div>
             <div className="space-y-3">
-              {filteredInProgress.map((task) => (
+              {paginatedFilteredInProgress.map((task) => (
                 <div key={task.id} className="space-y-2">
                   <TaskCard
                     title={task.title}
                     description={task.description || ''}
                     priority={task.priority}
                     assignedTo={task.assignedTo}
+                    assignedBy={task.assignedBy}
+                    tags={task.tags}
                     dueDate={task.dueDate}
                     projectName={task.projectName}
                     status={task.status}
@@ -625,13 +783,15 @@ export function TaskPage() {
               </h2>
             </div>
             <div className="space-y-3">
-              {filteredCompleted.map((task) => (
+              {paginatedFilteredCompleted.map((task) => (
                 <div key={task.id} className="space-y-2">
                   <TaskCard
                     title={task.title}
                     description={task.description || ''}
                     priority={task.priority}
                     assignedTo={task.assignedTo}
+                    assignedBy={task.assignedBy}
+                    tags={task.tags}
                     dueDate={task.dueDate}
                     projectName={task.projectName}
                     status={task.status}
@@ -671,7 +831,7 @@ export function TaskPage() {
         // List View - Grouped by Status
         <div className="space-y-8">
           {/* New Tasks Section */}
-          {filteredNew.length > 0 && (
+          {paginatedFilteredNew.length > 0 && (
             <div>
               <div className="mb-4 flex items-center gap-2 border-b pb-2">
                 <h3 className="text-xl font-semibold">New</h3>
@@ -680,13 +840,16 @@ export function TaskPage() {
                 </Badge>
               </div>
               <div className="space-y-3">
-                {filteredNew.map((task) => (
+                {paginatedFilteredNew.map((task) => (
                   <div key={task.id} className="space-y-2">
                     <TaskCard
+                      variant="compact"
                       title={task.title}
                       description={task.description || ''}
                       priority={task.priority}
                       assignedTo={task.assignedTo}
+                      assignedBy={task.assignedBy}
+                      tags={task.tags}
                       dueDate={task.dueDate}
                       projectName={task.projectName}
                       status={task.status}
@@ -720,11 +883,24 @@ export function TaskPage() {
                   </div>
                 ))}
               </div>
+              {filteredNew.length > tasksPerStatusList && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleStatusExpanded('new')}
+                  className="w-full mt-3 text-sm"
+                >
+                  {expandedStatuses.new 
+                    ? `Show Less` 
+                    : `View More (${filteredNew.length - tasksPerStatusList} more)`
+                  }
+                </Button>
+              )}
             </div>
           )}
 
           {/* In Progress Tasks Section */}
-          {filteredInProgress.length > 0 && (
+          {paginatedFilteredInProgress.length > 0 && (
             <div>
               <div className="mb-4 flex items-center gap-2 border-b pb-2">
                 <h3 className="text-xl font-semibold">In Progress</h3>
@@ -733,13 +909,16 @@ export function TaskPage() {
                 </Badge>
               </div>
               <div className="space-y-3">
-                {filteredInProgress.map((task) => (
+                {paginatedFilteredInProgress.map((task) => (
                   <div key={task.id} className="space-y-2">
                     <TaskCard
+                      variant="compact"
                       title={task.title}
                       description={task.description || ''}
                       priority={task.priority}
                       assignedTo={task.assignedTo}
+                      assignedBy={task.assignedBy}
+                      tags={task.tags}
                       dueDate={task.dueDate}
                       projectName={task.projectName}
                       status={task.status}
@@ -773,11 +952,24 @@ export function TaskPage() {
                   </div>
                 ))}
               </div>
+              {filteredInProgress.length > tasksPerStatusList && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleStatusExpanded('in_progress')}
+                  className="w-full mt-3 text-sm"
+                >
+                  {expandedStatuses.in_progress 
+                    ? `Show Less` 
+                    : `View More (${filteredInProgress.length - tasksPerStatusList} more)`
+                  }
+                </Button>
+              )}
             </div>
           )}
 
           {/* Completed Tasks Section */}
-          {filteredCompleted.length > 0 && (
+          {paginatedFilteredCompleted.length > 0 && (
             <div>
               <div className="mb-4 flex items-center gap-2 border-b pb-2">
                 <h3 className="text-xl font-semibold">Completed</h3>
@@ -786,13 +978,16 @@ export function TaskPage() {
                 </Badge>
               </div>
               <div className="space-y-3">
-                {filteredCompleted.map((task) => (
+                {paginatedFilteredCompleted.map((task) => (
                   <div key={task.id} className="space-y-2">
                     <TaskCard
+                      variant="compact"
                       title={task.title}
                       description={task.description || ''}
                       priority={task.priority}
                       assignedTo={task.assignedTo}
+                      assignedBy={task.assignedBy}
+                      tags={task.tags}
                       dueDate={task.dueDate}
                       projectName={task.projectName}
                       status={task.status}
@@ -826,6 +1021,19 @@ export function TaskPage() {
                   </div>
                 ))}
               </div>
+              {filteredCompleted.length > tasksPerStatusList && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleStatusExpanded('completed')}
+                  className="w-full mt-3 text-sm"
+                >
+                  {expandedStatuses.completed 
+                    ? `Show Less` 
+                    : `View More (${filteredCompleted.length - tasksPerStatusList} more)`
+                  }
+                </Button>
+              )}
             </div>
           )}
 
@@ -838,10 +1046,12 @@ export function TaskPage() {
         </div>
       )}
 
-      {/* Bottom Pagination */}
-      <div className="mt-6">
-        <PaginationControls />
-      </div>
+      {/* Bottom Pagination - Only show in Kanban view */}
+      {view === "kanban" && (
+        <div className="mt-6">
+          <PaginationControls />
+        </div>
+      )}
     </div>
   );
 }

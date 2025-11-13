@@ -31,6 +31,8 @@ export interface TaskModel {
   priority: "low" | "medium" | "high";
   assignedTo: string;
   assigneeId?: number | null;
+  assignedBy?: string; // Who assigned the task
+  tags?: string[]; // Task tags
   dueDate: string; // human readable date
   projectName: string;
   status: TaskStatus;
