@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, User, Clock, Tag, ExternalLink, Link2 } from "lucide-react";
+import { ArrowLeft, Calendar, User, Clock, Tag, ExternalLink, Link2, Edit2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { TaskDetailSidebar } from "@/components/MainPages/Task/TaskDetailSidebar";
 
 // Priority configuration
@@ -91,9 +94,23 @@ export default function TaskDetailPage() {
   const taskId = params.id as string;
   
   const task = getMockTask(taskId);
-  const priorityStyle = priorityConfig[task.priority];
-  const statusStyle = statusConfig[task.status];
-  const { formatted: formattedDueDate, isOverdue } = formatDate(task.dueDate);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTask, setEditedTask] = useState(task);
+  
+  const priorityStyle = priorityConfig[editedTask.priority];
+  const statusStyle = statusConfig[editedTask.status];
+  const { formatted: formattedDueDate, isOverdue } = formatDate(editedTask.dueDate);
+  
+  const handleSave = () => {
+    // Here you would typically save to backend
+    console.log("Saving task:", editedTask);
+    setIsEditing(false);
+  };
+  
+  const handleCancel = () => {
+    setEditedTask(task);
+    setIsEditing(false);
+  };
   
   return (
     <motion.div
@@ -126,18 +143,26 @@ export default function TaskDetailPage() {
           <div className="lg:col-span-2">
             {/* Task Header Card */}
             <Card className="shadow-lg border-gray-200 h-[calc(100vh-6rem)] flex flex-col overflow-hidden">
-              <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-white to-blue-50/30">
+              <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-white to-blue-50/30 flex-shrink-0">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-2">
-                    <CardTitle className="text-2xl font-bold text-gray-900 leading-tight">
-                      {task.title}
-                    </CardTitle>
+                    {isEditing ? (
+                      <Input
+                        value={editedTask.title}
+                        onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+                        className="text-2xl font-bold border-2 border-blue-300 focus:border-blue-500"
+                      />
+                    ) : (
+                      <CardTitle className="text-2xl font-bold text-gray-900 leading-tight">
+                        {editedTask.title}
+                      </CardTitle>
+                    )}
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge 
                         className={`${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border} text-xs font-semibold`}
                         variant="outline"
                       >
-                        {task.status.replace('_', ' ').toUpperCase()}
+                        {editedTask.status.replace('_', ' ').toUpperCase()}
                       </Badge>
                       <Badge 
                         className={`${priorityStyle.bg} ${priorityStyle.text} text-xs font-semibold`}
@@ -145,6 +170,41 @@ export default function TaskDetailPage() {
                         {priorityStyle.label}
                       </Badge>
                     </div>
+                  </div>
+                  
+                  {/* Edit/Save/Cancel buttons */}
+                  <div className="flex items-center gap-2">
+                    {isEditing ? (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={handleSave}
+                          className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <Save className="h-4 w-4" />
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancel}
+                          className="gap-2 hover:bg-red-50 hover:border-red-300"
+                        >
+                          <X className="h-4 w-4" />
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsEditing(true)}
+                        className="gap-2 hover:bg-blue-50 hover:border-blue-300"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -156,9 +216,17 @@ export default function TaskDetailPage() {
                     <span className="h-1 w-1 rounded-full bg-blue-500" />
                     Description
                   </h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {task.description}
-                  </p>
+                  {isEditing ? (
+                    <Textarea
+                      value={editedTask.description}
+                      onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
+                      className="min-h-[100px] border-2 border-blue-300 focus:border-blue-500"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {editedTask.description}
+                    </p>
+                  )}
                 </div>
 
                 {/* Task Details Grid */}
@@ -173,12 +241,12 @@ export default function TaskDetailPage() {
                       <div className="flex items-center gap-2">
                         <Avatar className="h-7 w-7 border-2 border-blue-200">
                           <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-bold">
-                            {getInitials(task.assignedTo)}
+                            {getInitials(editedTask.assignedTo)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{task.assignedTo}</p>
-                          <p className="text-xs text-gray-500">by {task.assignedBy}</p>
+                          <p className="text-sm font-semibold text-gray-900">{editedTask.assignedTo}</p>
+                          <p className="text-xs text-gray-500">by {editedTask.assignedBy}</p>
                         </div>
                       </div>
                     </div>
@@ -191,11 +259,22 @@ export default function TaskDetailPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-500 mb-1">Due Date</p>
-                      <p className={`text-sm font-semibold ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
-                        {formattedDueDate}
-                      </p>
-                      {isOverdue && (
-                        <p className="text-xs text-red-500 font-medium">Overdue</p>
+                      {isEditing ? (
+                        <Input
+                          type="date"
+                          value={editedTask.dueDate}
+                          onChange={(e) => setEditedTask({ ...editedTask, dueDate: e.target.value })}
+                          className="text-sm font-semibold border-2 border-blue-300 focus:border-blue-500"
+                        />
+                      ) : (
+                        <>
+                          <p className={`text-sm font-semibold ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+                            {formattedDueDate}
+                          </p>
+                          {isOverdue && (
+                            <p className="text-xs text-red-500 font-medium">Overdue</p>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -207,15 +286,36 @@ export default function TaskDetailPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-500 mb-1">Time Tracking</p>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {task.hoursLogged}h / {task.estimateHours}h
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <div 
-                          className="bg-purple-600 h-1.5 rounded-full transition-all" 
-                          style={{ width: `${Math.min((task.hoursLogged / task.estimateHours) * 100, 100)}%` }}
-                        />
-                      </div>
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={editedTask.hoursLogged}
+                            onChange={(e) => setEditedTask({ ...editedTask, hoursLogged: parseFloat(e.target.value) || 0 })}
+                            className="text-sm font-semibold border-2 border-blue-300 focus:border-blue-500 w-20"
+                          />
+                          <span className="text-sm font-semibold text-gray-900">/</span>
+                          <Input
+                            type="number"
+                            value={editedTask.estimateHours}
+                            onChange={(e) => setEditedTask({ ...editedTask, estimateHours: parseFloat(e.target.value) || 0 })}
+                            className="text-sm font-semibold border-2 border-blue-300 focus:border-blue-500 w-20"
+                          />
+                          <span className="text-sm font-semibold text-gray-900">h</span>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {editedTask.hoursLogged}h / {editedTask.estimateHours}h
+                          </p>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                            <div 
+                              className="bg-purple-600 h-1.5 rounded-full transition-all" 
+                              style={{ width: `${Math.min((editedTask.hoursLogged / editedTask.estimateHours) * 100, 100)}%` }}
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -226,7 +326,7 @@ export default function TaskDetailPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-500 mb-1">Project</p>
-                      <p className="text-sm font-semibold text-gray-900">{task.projectName}</p>
+                      <p className="text-sm font-semibold text-gray-900">{editedTask.projectName}</p>
                     </div>
                   </div>
 
@@ -237,37 +337,49 @@ export default function TaskDetailPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-500 mb-1">Collaborative Link</p>
-                      {task.collaborativeLink ? (
-                        <a
-                          href={task.collaborativeLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
-                        >
-                          <span className="truncate max-w-[200px]">
-                            {task.collaborativeLink.includes('github') ? 'View Repository' : 
-                             task.collaborativeLink.includes('docs.google') ? 'Open Doc' :
-                             task.collaborativeLink.includes('notion') ? 'View Notion' :
-                             'View Link'}
-                          </span>
-                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                        </a>
+                      {isEditing ? (
+                        <Input
+                          type="url"
+                          value={editedTask.collaborativeLink || ''}
+                          onChange={(e) => setEditedTask({ ...editedTask, collaborativeLink: e.target.value })}
+                          placeholder="https://..."
+                          className="text-sm font-semibold border-2 border-blue-300 focus:border-blue-500"
+                        />
                       ) : (
-                        <p className="text-sm text-gray-400 italic">No collaborative link added</p>
+                        <>
+                          {editedTask.collaborativeLink ? (
+                            <a
+                              href={editedTask.collaborativeLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                            >
+                              <span className="truncate max-w-[200px]">
+                                {editedTask.collaborativeLink.includes('github') ? 'View Repository' : 
+                                 editedTask.collaborativeLink.includes('docs.google') ? 'Open Doc' :
+                                 editedTask.collaborativeLink.includes('notion') ? 'View Notion' :
+                                 'View Link'}
+                              </span>
+                              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                            </a>
+                          ) : (
+                            <p className="text-sm text-gray-400 italic">No collaborative link added</p>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Tags */}
-                {task.tags && task.tags.length > 0 && (
+                {editedTask.tags && editedTask.tags.length > 0 && (
                   <div className="pt-4 border-t border-gray-100">
                     <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                       <span className="h-1 w-1 rounded-full bg-purple-500" />
                       Tags
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                      {task.tags.map((tag, idx) => (
+                      {editedTask.tags.map((tag, idx) => (
                         <Badge
                           key={idx}
                           variant="outline"
