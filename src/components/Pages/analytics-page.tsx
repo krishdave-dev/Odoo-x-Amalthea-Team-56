@@ -31,8 +31,8 @@ import {
   DollarSign,
   Download,
 } from "lucide-react";
-import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import domtoimage from "dom-to-image";
 
 interface AnalyticsData {
   totalProjects: number;
@@ -99,41 +99,47 @@ export function AnalyticsPage() {
     try {
       setDownloading(true);
 
-      // Capture the content as an image
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
+      // Capture the entire dashboard as an image
+      const dataUrl = await domtoimage.toPng(contentRef.current, {
+        height: contentRef.current.scrollHeight,
+        width: contentRef.current.scrollWidth,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+          width: contentRef.current.scrollWidth + 'px',
+          height: contentRef.current.scrollHeight + 'px'
+        },
+        quality: 1,
+        bgcolor: '#ffffff'
       });
 
-      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
       });
 
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgHeight = (contentRef.current.scrollHeight * imgWidth) / contentRef.current.scrollWidth;
       let heightLeft = imgHeight;
       let position = 0;
 
       // Add first page
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
       // Add additional pages if needed
       while (heightLeft > 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
       // Save the PDF
       pdf.save(
-        `analytics-report-${new Date().toISOString().split("T")[0]}.pdf`
+        `analytics-dashboard-${new Date().toISOString().split("T")[0]}.pdf`
       );
     } catch (error) {
       console.error("Error generating PDF:", error);
