@@ -92,24 +92,24 @@ export function ProjectPage() {
       setLoading(true);
       try {
         let url = `/api/projects?organizationId=${user.organizationId}&page=${currentPage}&pageSize=${itemsPerPage}`;
-        
+
         // Add status filter if not "all"
         if (statusFilter !== "all") {
           url += `&status=${statusFilter}`;
         }
-        
+
         const response = await fetch(url, { credentials: "include" });
 
         if (response.ok) {
           const result = await response.json();
-          
+
           // Check if it's a paginated response or a simple success response
           if (result.success && result.data) {
             // Handle paginated response from paginatedResponse()
             if (result.pagination) {
               setProjects(result.data);
               setTotalPages(result.pagination.totalPages || 1);
-            } 
+            }
             // Handle direct data array
             else if (Array.isArray(result.data)) {
               setProjects(result.data);
@@ -169,7 +169,6 @@ export function ProjectPage() {
     fetchKPIs();
   }, [user?.organizationId]);
 
-
   // Reset to page 1 when filter changes
   useEffect(() => {
     setCurrentPage(1);
@@ -206,11 +205,11 @@ export function ProjectPage() {
         });
 
         // Remove project from list
-        setProjects(prev => prev.filter(p => p.id !== projectToDelete));
-        
+        setProjects((prev) => prev.filter((p) => p.id !== projectToDelete));
+
         // If current page becomes empty, go to previous page
         if (projects.length === 1 && currentPage > 1) {
-          setCurrentPage(prev => prev - 1);
+          setCurrentPage((prev) => prev - 1);
         }
       } else {
         const data = await response.json();
@@ -276,7 +275,9 @@ export function ProjectPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">Projects</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">
+              Projects
+            </h1>
             <p className="mt-2 text-[#4A7FA7]">
               Manage and track all your projects in one place
             </p>
@@ -299,7 +300,9 @@ export function ProjectPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Please log in to view projects</p>
+          <p className="text-muted-foreground">
+            Please log in to view projects
+          </p>
         </div>
       </div>
     );
@@ -309,12 +312,13 @@ export function ProjectPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">Projects</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">
+            Projects
+          </h1>
           <p className="mt-2 text-[#4A7FA7]">
-            {user.role === "member" 
+            {user.role === "member"
               ? "View and track projects you are assigned to"
-              : "Manage and track all your projects in one place"
-            }
+              : "Manage and track all your projects in one place"}
           </p>
         </div>
         {/* Only show New Project button for admin, manager, and finance */}
@@ -397,8 +401,16 @@ export function ProjectPage() {
               title={project.name}
               tags={[project.status]}
               images={project.images || []}
-              deadline={project.endDate ? format(new Date(project.endDate), "MMM dd, yyyy") : undefined}
-              managerName={project.projectManager?.name || project.projectManager?.email || "Unassigned"}
+              deadline={
+                project.endDate
+                  ? format(new Date(project.endDate), "MMM dd, yyyy")
+                  : undefined
+              }
+              managerName={
+                project.projectManager?.name ||
+                project.projectManager?.email ||
+                "Unassigned"
+              }
               managerAvatar={undefined}
               tasksCount={project._count.tasks}
               completedTasksCount={project.tasks?.length || 0}
@@ -420,8 +432,16 @@ export function ProjectPage() {
               title={project.name}
               tags={[project.status]}
               images={project.images || []}
-              deadline={project.endDate ? format(new Date(project.endDate), "MMM dd, yyyy") : undefined}
-              managerName={project.projectManager?.name || project.projectManager?.email || "Unassigned"}
+              deadline={
+                project.endDate
+                  ? format(new Date(project.endDate), "MMM dd, yyyy")
+                  : undefined
+              }
+              managerName={
+                project.projectManager?.name ||
+                project.projectManager?.email ||
+                "Unassigned"
+              }
               managerAvatar={undefined}
               tasksCount={project._count.tasks}
               completedTasksCount={project.tasks?.length || 0}
@@ -449,8 +469,9 @@ export function ProjectPage() {
           <DialogHeader>
             <DialogTitle>Delete Project</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this project? This action cannot be undone.
-              All tasks and data associated with this project will be permanently removed.
+              Are you sure you want to delete this project? This action cannot
+              be undone. All tasks and data associated with this project will be
+              permanently removed.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -473,12 +494,16 @@ export function ProjectPage() {
       </Dialog>
 
       {/* New Project Choice Dialog */}
-      <Dialog open={newProjectChoiceOpen} onOpenChange={setNewProjectChoiceOpen}>
+      <Dialog
+        open={newProjectChoiceOpen}
+        onOpenChange={setNewProjectChoiceOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>How do you want to create your project?</DialogTitle>
             <DialogDescription>
-              Choose between creating a project manually or letting AI draft a plan for you.
+              Choose between creating a project manually or letting AI draft a
+              plan for you.
             </DialogDescription>
           </DialogHeader>
 
@@ -490,7 +515,9 @@ export function ProjectPage() {
             >
               <div className="flex items-center gap-2">
                 <PencilLine className="h-4 w-4 text-primary" />
-                <span className="text-base font-semibold text-foreground">Assign Custom Project</span>
+                <span className="text-base font-semibold text-foreground">
+                  Assign Custom Project
+                </span>
               </div>
               {/* <span className="text-sm text-muted-foreground">Use the standard form to set up the project and tasks manually.</span> */}
             </Button>
@@ -501,14 +528,19 @@ export function ProjectPage() {
             >
               <div className="flex items-center gap-2">
                 <Wand2 className="h-4 w-4" />
-                <span className="text-base font-semibold text-primary-foreground">Assign Project with AI</span>
+                <span className="text-base font-semibold text-primary-foreground">
+                  Assign Project with AI
+                </span>
               </div>
               {/* <span className="text-sm text-primary-foreground/80">Describe your project; we’ll generate a draft plan and suggested assignments.</span> */}
             </Button>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewProjectChoiceOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setNewProjectChoiceOpen(false)}
+            >
               Cancel
             </Button>
           </DialogFooter>
