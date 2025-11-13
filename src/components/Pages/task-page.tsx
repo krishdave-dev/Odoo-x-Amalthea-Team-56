@@ -624,7 +624,11 @@ export function TaskPage() {
       </div>
 
       {/* Stats Metrics */}
-      <StatsCards data={kpiMetrics} className="mb-6" />
+      <StatsCards 
+        data={kpiMetrics} 
+        className="mb-6" 
+        userRole={currentUser?.role as 'admin' | 'manager' | 'member'}
+      />
 
       {/* View Toggle and Pagination */}
       <div className="mb-6 flex items-center justify-between">

@@ -1,15 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { 
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Calendar, FolderKanban } from "lucide-react";
+import { Calendar, FolderKanban, Info } from "lucide-react";
+import { TaskHistory } from "./TaskHistory";
 
 // ClickUp-style priority configuration
 const priorityConfig = {
@@ -108,6 +111,7 @@ export function TaskCard({
   const { formatted: formattedDate, relative: relativeDate, isOverdue } = formatDueDate(dueDate);
   
   const isCompact = variant === "compact";
+  const [showHistory, setShowHistory] = useState(false);
 
   return (
     <TooltipProvider>
@@ -121,21 +125,42 @@ export function TaskCard({
           }`}>
             {title}
           </h3>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge
-                className={`${priorityStyle.bg} ${priorityStyle.text} text-xs font-medium cursor-help shrink-0 transition-colors ${
-                  isCompact ? 'px-2 py-0.5' : 'px-2.5 py-0.5'
-                }`}
-                variant="secondary"
-              >
-                {priorityStyle.label}
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Priority: {priorityStyle.label}</p>
-            </TooltipContent>
-          </Tooltip>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* View History Icon */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowHistory(true);
+                  }}
+                  className="flex items-center justify-center h-5 w-5 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 hover:text-blue-700 transition-all hover:scale-110 shadow-sm hover:shadow"
+                  aria-label="View task history"
+                >
+                  <Info className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-blue-600 text-white border-blue-700">
+                <p className="text-xs font-medium">View activity history</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  className={`${priorityStyle.bg} ${priorityStyle.text} text-xs font-medium cursor-help transition-colors ${
+                    isCompact ? 'px-2 py-0.5' : 'px-2.5 py-0.5'
+                  }`}
+                  variant="secondary"
+                >
+                  {priorityStyle.label}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Priority: {priorityStyle.label}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         <CardContent className={isCompact ? 'px-3 py-2.5 space-y-2' : 'p-4 space-y-3.5'}>
@@ -282,6 +307,13 @@ export function TaskCard({
           )}
         </CardContent>
       </Card>
+
+      {/* Task History Modal */}
+      <TaskHistory 
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        taskTitle={title}
+      />
     </TooltipProvider>
   );
 }

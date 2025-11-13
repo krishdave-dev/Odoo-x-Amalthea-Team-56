@@ -326,7 +326,11 @@ export function ProjectPage() {
       </div>
 
       {/* Stats Metrics */}
-      <StatsCards data={kpiMetrics} className="mb-6" />
+      <StatsCards 
+        data={kpiMetrics} 
+        className="mb-6" 
+        userRole={user?.role as 'admin' | 'manager' | 'member'}
+      />
 
       {/* View Toggle, Filter and Pagination */}
       <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
