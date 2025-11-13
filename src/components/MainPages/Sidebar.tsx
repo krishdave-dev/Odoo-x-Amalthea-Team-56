@@ -84,7 +84,9 @@ export function Sidebar() {
               </span>
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{user?.name || "User"}</p>
+              <p className="truncate text-sm font-medium">
+                {user?.name || "User"}
+              </p>
               <p className="truncate text-xs text-blue-100/80">{user?.email}</p>
             </div>
           </div>
@@ -94,15 +96,20 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="mt-4 space-y-1 px-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={
-                `group flex items-center gap-3 rounded-md ${collapsed ? "justify-center px-0" : "px-3"} py-2 text-sm transition-colors ` +
-                (isActive ? "bg-white/15 text-white" : "text-blue-100 hover:bg-white/10 hover:text-white")
+                `group flex items-center gap-3 rounded-md ${
+                  collapsed ? "justify-center px-0" : "px-3"
+                } py-2 text-sm transition-colors ` +
+                (isActive
+                  ? "bg-white/15 text-white"
+                  : "text-blue-100 hover:bg-white/10 hover:text-white")
               }
             >
               <Icon className="h-5 w-5 shrink-0" />
@@ -117,7 +124,9 @@ export function Sidebar() {
         <Button
           onClick={logout}
           variant="secondary"
-          className={`w-full justify-start bg-white/10 text-white hover:bg-white/20 ${collapsed ? "px-2" : "px-3"}`}
+          className={`w-full justify-start bg-white/10 text-white hover:bg-white/20 ${
+            collapsed ? "px-2" : "px-3"
+          }`}
         >
           <LogOut className="mr-2 h-4 w-4" />
           {!collapsed && <span>Logout</span>}
