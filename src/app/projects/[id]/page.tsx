@@ -1362,15 +1362,11 @@ export default function ProjectDetailsPage() {
                 <TabsContent value="expenses">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold">Expenses</h3>
-                    <Button
+                    <Button 
                       onClick={() => {
-                        // Member-only: show choice between custom and OCR
-                        if (user?.role === "member") {
-                          setCreateExpenseChoiceOpen(true);
-                        } else {
-                          setCreateExpenseOpen(true);
-                        }
-                      }}
+                        // All roles: show choice between custom and OCR
+                        setCreateExpenseChoiceOpen(true);
+                      }} 
                       size="sm"
                     >
                       <Plus className="h-4 w-4 mr-2" />

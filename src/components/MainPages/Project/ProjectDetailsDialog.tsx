@@ -27,6 +27,8 @@ import { CreatePurchaseOrderDialog } from "./CreatePurchaseOrderDialog";
 import { CreateCustomerInvoiceDialog } from "./CreateCustomerInvoiceDialog";
 import { CreateVendorBillDialog } from "./CreateVendorBillDialog";
 import { CreateExpenseDialog } from "./CreateExpenseDialog";
+import { CreateExpenseChoiceDialog } from "../ExpenseOCR/CreateExpenseChoiceDialog";
+import { OcrExpenseDialog } from "../ExpenseOCR/OcrExpenseDialog";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProjectDetailsDialogProps {
@@ -128,6 +130,8 @@ export function ProjectDetailsDialog({
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [createBillOpen, setCreateBillOpen] = useState(false);
   const [createExpenseOpen, setCreateExpenseOpen] = useState(false);
+  const [createExpenseChoiceOpen, setCreateExpenseChoiceOpen] = useState(false);
+  const [createExpenseOcrOpen, setCreateExpenseOcrOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -509,7 +513,10 @@ export function ProjectDetailsDialog({
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">Expenses</h3>
                 <Button 
-                  onClick={() => setCreateExpenseOpen(true)} 
+                  onClick={() => {
+                    // All roles: show choice between custom and OCR
+                    setCreateExpenseChoiceOpen(true);
+                  }} 
                   size="sm"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -690,6 +697,17 @@ export function ProjectDetailsDialog({
         }}
       />
 
+      {/* Create Expense Choice (Member/Manager) */}
+      <CreateExpenseChoiceDialog
+        open={createExpenseChoiceOpen}
+        onOpenChange={setCreateExpenseChoiceOpen}
+        onChoose={(mode) => {
+          setCreateExpenseChoiceOpen(false);
+          if (mode === "custom") setCreateExpenseOpen(true);
+          else setCreateExpenseOcrOpen(true);
+        }}
+      />
+
       {/* Create Expense Dialog */}
       <CreateExpenseDialog
         open={createExpenseOpen}
@@ -698,6 +716,18 @@ export function ProjectDetailsDialog({
         organizationId={organizationId}
         userId={user?.id || 0}
         userRole={user?.role || "member"}
+        onSuccess={() => {
+          fetchProjectLinks();
+        }}
+      />
+
+      {/* OCR Expense Dialog */}
+      <OcrExpenseDialog
+        open={createExpenseOcrOpen}
+        onOpenChange={setCreateExpenseOcrOpen}
+        projectId={projectId}
+        organizationId={organizationId}
+        userId={user?.id || 0}
         onSuccess={() => {
           fetchProjectLinks();
         }}
