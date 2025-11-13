@@ -21,6 +21,7 @@ import {
   Pencil,
   Search,
   X,
+  Network,
 } from "lucide-react";
 import { StatsCards } from "@/components/MainPages/Stats/StatsCards";
 import {
@@ -901,6 +902,13 @@ export function TaskPage() {
               </div>
             </PopoverContent>
           </Popover>
+
+          <Button variant="outline" size="sm" asChild className="border-[#B3CFE5]">
+            <Link href="/map">
+              <Network className="h-4 w-4 mr-2" />
+              Dependency Map
+            </Link>
+          </Button>
 
           {currentUser && currentUser.role !== "member" && (
             <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">

@@ -10,7 +10,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Calendar, MoreVertical, Edit3, Trash2, Flag } from "lucide-react";
 import { useState } from "react";
-import { ProjectDetailsDialog } from "./ProjectDetailsDialog";
+import { useRouter } from "next/navigation";
 
 interface ProjectCardProps {
   projectId: number;
@@ -48,7 +48,7 @@ export function ProjectCard({
   onDelete,
 }: ProjectCardProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const router = useRouter();
 
   const handleEdit = () => {
     setPopoverOpen(false);
@@ -80,12 +80,11 @@ export function ProjectCard({
   };
 
   return (
-    <>
-      <Card 
-        className="hover:shadow-lg transition-shadow cursor-pointer p-4"
-        onClick={() => setDetailsDialogOpen(true)}
-      >
-        <CardContent className="p-0">
+    <Card 
+      className="hover:shadow-lg transition-shadow cursor-pointer p-4"
+      onClick={() => router.push(`/projects/${projectId}`)}
+    >
+      <CardContent className="p-0">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <div className="flex gap-2 mb-3 flex-wrap">
@@ -201,14 +200,5 @@ export function ProjectCard({
         {/* footer intentionally left minimal; kept for spacing */}
       </CardFooter>
     </Card>
-
-      <ProjectDetailsDialog
-        projectId={projectId}
-        projectName={title}
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        organizationId={organizationId}
-      />
-    </>
   );
 }
