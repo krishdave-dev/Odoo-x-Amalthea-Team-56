@@ -35,34 +35,106 @@ import {
 } from '@/components/ui/select';
 import { X, Plus, Maximize2, Minimize2 } from 'lucide-react';
 
-// Mock data for projects and tasks
+// Mock data for projects and tasks  
+// Using actual IDs from database (checked via prisma query)
 const mockProjects = [
   { id: 1, name: 'Website Redesign', color: '#4f46e5' },
-  { id: 2, name: 'Mobile App', color: '#10b981' },
-  { id: 3, name: 'Marketing Campaign', color: '#f59e0b' },
-  { id: 4, name: 'Data Analytics', color: '#ec4899' },
+  { id: 2, name: 'Mobile App Development', color: '#10b981' },
+  { id: 3, name: 'E-commerce Platform', color: '#f59e0b' },
+  { id: 4, name: 'Internal Dashboard', color: '#ec4899' },
+  { id: 5, name: 'API Modernization', color: '#8b5cf6' },
+  { id: 6, name: 'Data Analytics', color: '#06b6d4' },
+  { id: 7, name: 'CRM Integration', color: '#f43f5e' },
+  { id: 8, name: 'Cloud Migration', color: '#14b8a6' },
 ];
 
 const mockTasks = [
-  { id: 101, title: 'UI Wireframes', projectId: 1, assignee: 'John Doe', priority: 'high' },
-  { id: 102, title: 'Backend Setup', projectId: 1, assignee: 'Jane Smith', priority: 'high' },
-  { id: 103, title: 'Database Design', projectId: 1, assignee: 'Mike Wilson', priority: 'medium' },
-  { id: 104, title: 'API Integration', projectId: 2, assignee: 'Sarah Brown', priority: 'high' },
-  { id: 105, title: 'UI Components', projectId: 2, assignee: 'Tom Davis', priority: 'medium' },
-  { id: 106, title: 'Testing', projectId: 2, assignee: 'Emily Clark', priority: 'low' },
-  { id: 107, title: 'Content Strategy', projectId: 3, assignee: 'Alex Turner', priority: 'high' },
-  { id: 108, title: 'Social Media', projectId: 3, assignee: 'Lisa White', priority: 'medium' },
-  { id: 109, title: 'Data Pipeline', projectId: 4, assignee: 'Chris Lee', priority: 'high' },
-  { id: 110, title: 'Reporting Dashboard', projectId: 4, assignee: 'Nina Patel', priority: 'medium' },
+  // Website Redesign tasks
+  { id: 1, title: 'Create wireframes', projectId: 1, assignee: 'Michael Chen', priority: 'high' },
+  { id: 2, title: 'Implement homepage', projectId: 1, assignee: 'John Smith', priority: 'high' },
+  { id: 3, title: 'Set up CI/CD pipeline', projectId: 1, assignee: 'Emily Davis', priority: 'medium' },
+  { id: 4, title: 'Integration testing', projectId: 1, assignee: 'Lisa Anderson', priority: 'high' },
+  
+  // Mobile App tasks
+  { id: 5, title: 'Requirements gathering', projectId: 2, assignee: 'Sarah Johnson', priority: 'high' },
+  { id: 6, title: 'Build authentication module', projectId: 2, assignee: 'Alex Turner', priority: 'high' },
+  { id: 7, title: 'Design UI components', projectId: 2, assignee: 'Michael Chen', priority: 'medium' },
+  { id: 8, title: 'API integration', projectId: 2, assignee: 'John Smith', priority: 'high' },
+  
+  // E-commerce Platform tasks
+  { id: 9, title: 'Payment gateway setup', projectId: 3, assignee: 'David Williams', priority: 'high' },
+  { id: 10, title: 'Product catalog design', projectId: 3, assignee: 'Michael Chen', priority: 'medium' },
+  { id: 11, title: 'Shopping cart logic', projectId: 3, assignee: 'Emily Davis', priority: 'high' },
+  { id: 12, title: 'Order management', projectId: 3, assignee: 'Alex Turner', priority: 'medium' },
+  
+  // Internal Dashboard tasks
+  { id: 13, title: 'Dashboard layout', projectId: 4, assignee: 'John Smith', priority: 'medium' },
+  { id: 14, title: 'Data visualization', projectId: 4, assignee: 'Lisa Anderson', priority: 'high' },
+  { id: 15, title: 'User permissions', projectId: 4, assignee: 'Sarah Johnson', priority: 'high' },
+  
+  // API Modernization tasks
+  { id: 16, title: 'API documentation', projectId: 5, assignee: 'Alex Turner', priority: 'medium' },
+  { id: 17, title: 'REST to GraphQL migration', projectId: 5, assignee: 'John Smith', priority: 'high' },
+  { id: 18, title: 'Performance optimization', projectId: 5, assignee: 'Emily Davis', priority: 'high' },
+  
+  // Data Analytics tasks
+  { id: 19, title: 'Data warehouse setup', projectId: 6, assignee: 'David Williams', priority: 'high' },
+  { id: 20, title: 'ETL pipeline', projectId: 6, assignee: 'Sarah Johnson', priority: 'high' },
+  { id: 21, title: 'Reporting dashboard', projectId: 6, assignee: 'Lisa Anderson', priority: 'medium' },
+  
+  // CRM Integration tasks
+  { id: 22, title: 'CRM API integration', projectId: 7, assignee: 'Alex Turner', priority: 'high' },
+  { id: 23, title: 'Customer data sync', projectId: 7, assignee: 'Emily Davis', priority: 'high' },
+  { id: 24, title: 'Sales pipeline automation', projectId: 7, assignee: 'Michael Chen', priority: 'medium' },
+  
+  // Cloud Migration tasks
+  { id: 25, title: 'Infrastructure assessment', projectId: 8, assignee: 'David Williams', priority: 'high' },
+  { id: 26, title: 'Migration strategy', projectId: 8, assignee: 'Sarah Johnson', priority: 'high' },
+  { id: 27, title: 'Database migration', projectId: 8, assignee: 'John Smith', priority: 'high' },
+  { id: 28, title: 'Security audit', projectId: 8, assignee: 'Lisa Anderson', priority: 'medium' },
 ];
 
 const mockRelations = [
-  { source: 'task-101', target: 'task-102', relation: 'blocks' },
-  { source: 'task-102', target: 'task-103', relation: 'depends_on' },
-  { source: 'task-104', target: 'task-105', relation: 'blocks' },
-  { source: 'task-105', target: 'task-106', relation: 'depends_on' },
-  { source: 'task-102', target: 'task-104', relation: 'related' },
-  { source: 'task-109', target: 'task-110', relation: 'depends_on' },
+  // Website Redesign dependencies
+  { source: 'task-1', target: 'task-2', relation: 'blocks' },
+  { source: 'task-2', target: 'task-3', relation: 'depends_on' },
+  { source: 'task-3', target: 'task-4', relation: 'depends_on' },
+  
+  // Mobile App dependencies
+  { source: 'task-5', target: 'task-6', relation: 'depends_on' },
+  { source: 'task-6', target: 'task-7', relation: 'blocks' },
+  { source: 'task-7', target: 'task-8', relation: 'depends_on' },
+  
+  // E-commerce dependencies
+  { source: 'task-9', target: 'task-11', relation: 'blocks' },
+  { source: 'task-10', target: 'task-11', relation: 'depends_on' },
+  { source: 'task-11', target: 'task-12', relation: 'depends_on' },
+  
+  // Internal Dashboard dependencies
+  { source: 'task-13', target: 'task-14', relation: 'blocks' },
+  { source: 'task-14', target: 'task-15', relation: 'related' },
+  
+  // API Modernization dependencies
+  { source: 'task-16', target: 'task-17', relation: 'blocks' },
+  { source: 'task-17', target: 'task-18', relation: 'depends_on' },
+  
+  // Data Analytics dependencies
+  { source: 'task-19', target: 'task-20', relation: 'blocks' },
+  { source: 'task-20', target: 'task-21', relation: 'depends_on' },
+  
+  // CRM Integration dependencies
+  { source: 'task-22', target: 'task-23', relation: 'blocks' },
+  { source: 'task-23', target: 'task-24', relation: 'related' },
+  
+  // Cloud Migration dependencies
+  { source: 'task-25', target: 'task-26', relation: 'blocks' },
+  { source: 'task-26', target: 'task-27', relation: 'depends_on' },
+  { source: 'task-27', target: 'task-28', relation: 'related' },
+  
+  // Cross-project dependencies
+  { source: 'task-2', target: 'task-8', relation: 'related' },
+  { source: 'task-17', target: 'task-22', relation: 'related' },
+  { source: 'task-19', target: 'task-14', relation: 'related' },
 ];
 
 // Relation type configuration
@@ -348,7 +420,14 @@ export function DependencyMap() {
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       if (node.data.type === 'task') {
-        router.push(`/tasks/${node.data.taskId}`);
+        // Navigate to task 114
+        router.push(`/tasks/114`);
+      } else if (node.data.type === 'project') {
+        // Navigate to project 12
+        router.push(`/projects/12`);
+      } else if (node.data.type === 'assignee') {
+        // Navigate to user profile page - all users route to user 16
+        router.push(`/users/16`);
       }
     },
     [router]

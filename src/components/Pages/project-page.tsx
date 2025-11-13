@@ -30,6 +30,7 @@ import {
   Filter,
   Wand2,
   PencilLine,
+  Network,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -321,16 +322,18 @@ export function ProjectPage() {
               : "Manage and track all your projects in one place"}
           </p>
         </div>
-        {/* Only show New Project button for admin, manager, and finance */}
-        {user.role !== "member" && (
-          <Button
-            className="bg-primary hover:bg-primary/90"
-            onClick={() => setNewProjectChoiceOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
-        )}
+        <div className="flex gap-2 items-center">
+          {/* Only show New Project button for admin, manager, and finance */}
+          {user.role !== "member" && (
+            <Button
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => setNewProjectChoiceOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats Metrics */}

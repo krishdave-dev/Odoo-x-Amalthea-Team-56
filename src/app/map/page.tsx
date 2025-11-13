@@ -14,9 +14,9 @@ export default function MapPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/tasks">
+                <Link href="/project">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Tasks
+                  Back to Projects
                 </Link>
               </Button>
               <div className="flex items-center gap-3">
