@@ -146,28 +146,42 @@ export function ProjectPage() {
   // Fetch KPI metrics
   useEffect(() => {
     const fetchKPIs = async () => {
-      if (!user?.organizationId) return;
+      console.log("User data:", user);
+      console.log("Organization ID:", user?.organizationId);
+      
+      if (!user?.organizationId) {
+        console.log("No organizationId found, skipping KPI fetch");
+        return;
+      }
 
       try {
-        const response = await fetch(
-          `/api/analytics/dashboard/kpis?organizationId=${user.organizationId}`,
-          { credentials: "include" }
-        );
+        const url = `/api/analytics/dashboard/kpis?organizationId=${user.organizationId}`;
+        console.log("Fetching KPIs from:", url);
+        
+        const response = await fetch(url, { credentials: "include" });
+        console.log("KPI Response status:", response.status);
 
         if (response.ok) {
           const result = await response.json();
+          console.log("KPI Result:", result);
           if (result.success && result.data) {
             setKpiMetrics(result.data);
+            console.log("KPI metrics updated:", result.data);
+          } else {
+            console.log("KPI result not successful or no data");
           }
+        } else {
+          console.error("KPI fetch failed:", response.status, response.statusText);
+          const errorText = await response.text();
+          console.error("Error response:", errorText);
         }
       } catch (error) {
         console.error("Error fetching KPIs:", error);
-        // Silently fail - KPIs are not critical
       }
     };
 
     fetchKPIs();
-  }, [user?.organizationId]);
+  }, [user]);
 
   // Reset to page 1 when filter changes
   useEffect(() => {
