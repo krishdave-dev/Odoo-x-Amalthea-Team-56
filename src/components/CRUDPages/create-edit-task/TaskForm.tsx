@@ -84,6 +84,9 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
   const [status, setStatus] = useState<string>(
     initialData?.status || "new"
   );
+  const [collaborativeLink, setCollaborativeLink] = useState<string>(
+    initialData?.metadata?.collaborativeLink || ""
+  );
   const [attachmentRefresh, setAttachmentRefresh] = useState(0);
   
   // Generate temporary ID for pending tasks (used in create mode)
@@ -269,6 +272,7 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
         metadata: {
           image: image ?? undefined,
           timesheets,
+          collaborativeLink: collaborativeLink?.trim() || undefined,
         },
       };
 
@@ -526,6 +530,25 @@ export function TaskForm({ mode = "create", initialData }: TaskFormProps) {
               </PopoverContent>
             </Popover>
           </div>
+        </div>
+
+        {/* Collaborative Link */}
+        <div className="mb-6">
+          <Label htmlFor="collaborative-link" className="text-base mb-2 flex items-center gap-2">
+            <span>Collaborative Doc / GitHub Repo Link</span>
+            <span className="text-xl">🔗</span>
+          </Label>
+          <Input
+            id="collaborative-link"
+            type="url"
+            value={collaborativeLink}
+            onChange={(e) => setCollaborativeLink(e.target.value)}
+            placeholder="Paste shared document or repo URL…"
+            className="h-11"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Attach a doc, design, or repo for collaboration. Optional.
+          </p>
         </div>
 
         {/* Image - Legacy (keeping for backward compatibility) */}

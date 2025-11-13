@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -107,15 +108,25 @@ export function TaskCard({
   assignedBy,
   variant = "default",
 }: TaskCardProps) {
+  const router = useRouter();
   const priorityStyle = priorityConfig[priority] || priorityConfig.low;
   const { formatted: formattedDate, relative: relativeDate, isOverdue } = formatDueDate(dueDate);
   
   const isCompact = variant === "compact";
   const [showHistory, setShowHistory] = useState(false);
 
+  const handleCardClick = () => {
+    if (taskId) {
+      router.push(`/tasks/${taskId}`);
+    }
+  };
+
   return (
     <TooltipProvider>
-      <Card className="shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 cursor-pointer group">
+      <Card 
+        onClick={handleCardClick}
+        className="shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 cursor-pointer group"
+      >
         {/* Top bar with title and priority badge */}
         <div className={`flex items-start justify-between gap-3 border-b border-gray-100 ${
           isCompact ? 'px-3 py-2.5' : 'p-4 pb-3'
@@ -164,15 +175,6 @@ export function TaskCard({
         </div>
 
         <CardContent className={isCompact ? 'px-3 py-2.5 space-y-2' : 'p-4 space-y-3.5'}>
-          {/* Description */}
-          {description && (
-            <p className={`text-xs text-gray-600 ${
-              isCompact ? 'line-clamp-1 leading-tight' : 'line-clamp-2 leading-relaxed'
-            }`}>
-              {description}
-            </p>
-          )}
-
           {/* Assignee section with avatar */}
           <div className={`flex items-center ${isCompact ? 'gap-2' : 'gap-2.5'}`}>
             <Tooltip>
@@ -260,26 +262,6 @@ export function TaskCard({
                   +{tags.length - 5}
                 </Badge>
               )}
-            </div>
-          )}
-
-          {/* Status badge */}
-          {status && (
-            <div className="flex items-center">
-              <Badge 
-                variant="outline" 
-                className={`text-xs font-medium transition-colors ${
-                  isCompact ? 'px-2 py-0 h-4' : 'px-2.5 py-0.5'
-                } ${
-                  status === 'completed' 
-                    ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' 
-                    : status === 'in_progress'
-                    ? 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100'
-                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                {status.replace('_', ' ').toUpperCase()}
-              </Badge>
             </div>
           )}
 

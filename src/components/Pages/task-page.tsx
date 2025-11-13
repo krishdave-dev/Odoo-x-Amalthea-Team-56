@@ -27,7 +27,6 @@ import {
   TaskModel,
 } from "@/components/MainPages/Task/TaskActionDialog";
 import { MemberTaskActions } from "@/components/MainPages/Task/MemberTaskActions";
-import { ViewTimesheetsButton } from "@/components/MainPages/Task/ViewTimesheetsButton";
 
 // Fetch tasks from backend API
 
@@ -688,30 +687,6 @@ export function TaskPage() {
                     taskId={task.id}
                     images={task.images || []}
                   />
-                  <div className="flex gap-2">
-                    <ViewTimesheetsButton
-                      taskId={task.id}
-                      taskTitle={task.title}
-                      hoursLogged={task.hoursLogged || 0}
-                    />
-                    {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/edittask?id=${task.id}`)}
-                        className="border-[#B3CFE5]"
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    ) : currentUser?.role === "member" ? (
-                      <MemberTaskActions
-                        taskId={task.id}
-                        currentStatus={task.status}
-                        onStatusChange={fetchTasks}
-                      />
-                    ) : null}
-                  </div>
                 </div>
               ))}
             </div>
@@ -743,30 +718,6 @@ export function TaskPage() {
                     taskId={task.id}
                     images={task.images || []}
                   />
-                  <div className="flex gap-2">
-                    <ViewTimesheetsButton
-                      taskId={task.id}
-                      taskTitle={task.title}
-                      hoursLogged={task.hoursLogged || 0}
-                    />
-                    {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/edittask?id=${task.id}`)}
-                        className="border-[#B3CFE5]"
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    ) : currentUser?.role === "member" ? (
-                      <MemberTaskActions
-                        taskId={task.id}
-                        currentStatus={task.status}
-                        onStatusChange={fetchTasks}
-                      />
-                    ) : null}
-                  </div>
                 </div>
               ))}
             </div>
@@ -798,30 +749,6 @@ export function TaskPage() {
                     taskId={task.id}
                     images={task.images || []}
                   />
-                  <div className="flex gap-2">
-                    <ViewTimesheetsButton
-                      taskId={task.id}
-                      taskTitle={task.title}
-                      hoursLogged={task.hoursLogged || 0}
-                    />
-                    {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/edittask?id=${task.id}`)}
-                        className="border-[#B3CFE5]"
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    ) : currentUser?.role === "member" ? (
-                      <MemberTaskActions
-                        taskId={task.id}
-                        currentStatus={task.status}
-                        onStatusChange={fetchTasks}
-                      />
-                    ) : null}
-                  </div>
                 </div>
               ))}
             </div>
@@ -856,30 +783,6 @@ export function TaskPage() {
                       taskId={task.id}
                       images={task.images || []}
                     />
-                    <div className="flex gap-2">
-                      <ViewTimesheetsButton
-                        taskId={task.id}
-                        taskTitle={task.title}
-                        hoursLogged={task.hoursLogged || 0}
-                      />
-                      {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => router.push(`/edittask?id=${task.id}`)}
-                          className="border-[#B3CFE5]"
-                        >
-                          <Pencil className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                      ) : currentUser?.role === "member" ? (
-                        <MemberTaskActions
-                          taskId={task.id}
-                          currentStatus={task.status}
-                          onStatusChange={fetchTasks}
-                        />
-                      ) : null}
-                    </div>
                   </div>
                 ))}
               </div>
@@ -925,30 +828,6 @@ export function TaskPage() {
                       taskId={task.id}
                       images={task.images || []}
                     />
-                    <div className="flex gap-2">
-                      <ViewTimesheetsButton
-                        taskId={task.id}
-                        taskTitle={task.title}
-                        hoursLogged={task.hoursLogged || 0}
-                      />
-                      {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => router.push(`/edittask?id=${task.id}`)}
-                          className="border-[#B3CFE5]"
-                        >
-                          <Pencil className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                      ) : currentUser?.role === "member" ? (
-                        <MemberTaskActions
-                          taskId={task.id}
-                          currentStatus={task.status}
-                          onStatusChange={fetchTasks}
-                        />
-                      ) : null}
-                    </div>
                   </div>
                 ))}
               </div>
@@ -994,30 +873,6 @@ export function TaskPage() {
                       taskId={task.id}
                       images={task.images || []}
                     />
-                    <div className="flex gap-2">
-                      <ViewTimesheetsButton
-                        taskId={task.id}
-                        taskTitle={task.title}
-                        hoursLogged={task.hoursLogged || 0}
-                      />
-                      {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => router.push(`/edittask?id=${task.id}`)}
-                          className="border-[#B3CFE5]"
-                        >
-                          <Pencil className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                      ) : currentUser?.role === "member" ? (
-                        <MemberTaskActions
-                          taskId={task.id}
-                          currentStatus={task.status}
-                          onStatusChange={fetchTasks}
-                        />
-                      ) : null}
-                    </div>
                   </div>
                 ))}
               </div>
