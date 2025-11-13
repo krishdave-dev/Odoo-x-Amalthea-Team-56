@@ -25,16 +25,37 @@ import {
 import { StatsCards } from "@/components/MainPages/Stats/StatsCards";
 import {
   TaskModel,
+  TaskStatus,
 } from "@/components/MainPages/Task/TaskActionDialog";
 import { MemberTaskActions } from "@/components/MainPages/Task/MemberTaskActions";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+} from "@dnd-kit/core";
+import { 
+  SortableContext, 
+  arrayMove,
+  verticalListSortingStrategy 
+} from "@dnd-kit/sortable";
+import { getNextStatus } from "@/utils/taskStatusFlow";
+import { useToast } from "@/hooks/use-toast";
+import { DroppableColumn } from "@/components/MainPages/Task/DroppableColumn";
 
 // Fetch tasks from backend API
 
 export function TaskPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const [tasksState, setTasksState] = useState<TaskModel[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -91,14 +112,36 @@ export function TaskPage() {
       }
       const json = await res.json();
       const data = (json?.data ?? []) as TaskModel[];
-      // Sort tasks by deadline (earliest first) - this creates priority
+      
+      // Sort tasks by status order and priority hierarchy within each status
+      const statusOrder: Record<TaskStatus, number> = { 
+        new: 1, 
+        in_progress: 2, 
+        completed: 3 
+      };
+      const priorityOrder: Record<string, number> = { 
+        high: 3, 
+        medium: 2, 
+        low: 1 
+      };
+      
       const sortedData = data.sort((a, b) => {
+        // First sort by status
+        const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+        if (statusDiff !== 0) return statusDiff;
+        
+        // Within same status, sort by priority (high to low)
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        // If same priority, sort by due date (earliest first)
         const dateA = new Date(a.dueDate).getTime();
         const dateB = new Date(b.dueDate).getTime();
         if (isNaN(dateA)) return 1;
         if (isNaN(dateB)) return -1;
-        return dateA - dateB; // Earliest deadline = highest priority
+        return dateA - dateB;
       });
+      
       setTasksState(sortedData);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load tasks";
@@ -147,6 +190,287 @@ export function TaskPage() {
     }, {} as Record<string, number>);
     return { assignees, priorities };
   }, [allTasks]);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required to start drag
+      },
+    })
+  );
+
+  // Handle advancing task status with checkmark
+  const handleAdvanceStatus = useCallback((taskId: number) => {
+    setTasksState(prevTasks => {
+      const updatedTasks = prevTasks.map(task => {
+        if (task.id === taskId) {
+          const newStatus = getNextStatus(task.status) as TaskStatus;
+          if (newStatus !== task.status) {
+            toast({
+              title: "Task Updated",
+              description: `Task moved to ${newStatus.replace('_', ' ')} 🪄`,
+            });
+            return { ...task, status: newStatus };
+          }
+        }
+        return task;
+      });
+      return updatedTasks;
+    });
+  }, [toast]);
+
+  // Handle drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Extract task ID from the drag identifiers
+    const activeTaskId = parseInt(activeId.split('-')[1]);
+    if (!activeTaskId) return;
+
+    // Check if dropped on a droppable column (status change)
+    const overStatus = overId.startsWith('droppable-') ? overId.split('-')[1] as TaskStatus : null;
+    
+    // Check if dropped on another task (for reordering or status change)
+    const overTaskId = overId.startsWith('task-') ? parseInt(overId.split('-')[1]) : null;
+
+    // Helper function to determine priority based on position
+    const determinePriorityAtPosition = (
+      tasks: TaskModel[],
+      insertIndex: number,
+      targetStatus: TaskStatus
+    ): 'low' | 'medium' | 'high' => {
+      // Get tasks in the target column only
+      const columnTasks = tasks.filter(t => t.status === targetStatus);
+      
+      if (columnTasks.length === 0) {
+        return 'medium'; // Default priority for empty column
+      }
+
+      // Find the position in the column
+      let columnPosition = 0;
+      let actualInsertIndex = insertIndex;
+      
+      for (let i = 0; i < tasks.length && i < insertIndex; i++) {
+        if (tasks[i].status === targetStatus) {
+          columnPosition++;
+        }
+      }
+
+      // Check priority of card above and below
+      const cardAbove = columnPosition > 0 ? columnTasks[columnPosition - 1] : null;
+      const cardBelow = columnPosition < columnTasks.length ? columnTasks[columnPosition] : null;
+
+      // Priority hierarchy: high > medium > low
+      const priorityValue: Record<string, number> = { high: 3, medium: 2, low: 1 };
+      
+      if (!cardAbove && cardBelow) {
+        // Dropped at the top
+        const belowPriority = priorityValue[cardBelow.priority] || 2;
+        // Should be same or higher priority than card below
+        if (belowPriority === 3) return 'high';
+        if (belowPriority === 2) return 'high'; // Boost to high if medium is below
+        return 'medium';
+      }
+      
+      if (cardAbove && !cardBelow) {
+        // Dropped at the bottom
+        const abovePriority = priorityValue[cardAbove.priority] || 2;
+        // Should be same or lower priority than card above
+        if (abovePriority === 1) return 'low';
+        if (abovePriority === 2) return 'low'; // Lower to low if medium is above
+        return 'medium';
+      }
+      
+      if (cardAbove && cardBelow) {
+        // Dropped in the middle
+        const abovePriority = priorityValue[cardAbove.priority] || 2;
+        const belowPriority = priorityValue[cardBelow.priority] || 2;
+        
+        // Should match the priority of the surrounding cards
+        // If they're the same, use that priority
+        if (abovePriority === belowPriority) {
+          return cardAbove.priority as 'low' | 'medium' | 'high';
+        }
+        
+        // If they differ, use the lower one to maintain hierarchy
+        if (abovePriority > belowPriority) {
+          return cardBelow.priority as 'low' | 'medium' | 'high';
+        } else {
+          return cardAbove.priority as 'low' | 'medium' | 'high';
+        }
+      }
+
+      return 'medium'; // Default fallback
+    };
+
+    // Helper function to adjust all priorities in a column to maintain hierarchy
+    const adjustColumnPriorities = (tasks: TaskModel[], status: TaskStatus): TaskModel[] => {
+      const columnTasks = tasks.filter(t => t.status === status);
+      const otherTasks = tasks.filter(t => t.status !== status);
+      
+      if (columnTasks.length === 0) return tasks;
+
+      // Sort by current position (already in correct visual order from drag-drop)
+      // Don't re-sort, just adjust priorities based on position
+      const adjustedColumnTasks = columnTasks.map((task, index) => {
+        const total = columnTasks.length;
+        const position = index / total;
+
+        let newPriority: 'low' | 'medium' | 'high';
+        
+        if (position < 0.33) {
+          // Top 33% - High priority
+          newPriority = 'high';
+        } else if (position < 0.67) {
+          // Middle 34% - Medium priority
+          newPriority = 'medium';
+        } else {
+          // Bottom 33% - Low priority
+          newPriority = 'low';
+        }
+
+        return { ...task, priority: newPriority };
+      });
+
+      // Merge back with other tasks, maintaining order
+      const result: TaskModel[] = [];
+      let columnIndex = 0;
+      let otherIndex = 0;
+
+      for (const task of tasks) {
+        if (task.status === status) {
+          result.push(adjustedColumnTasks[columnIndex++]);
+        } else {
+          result.push(otherTasks[otherIndex++]);
+        }
+      }
+
+      return result;
+    };
+
+    setTasksState(prevTasks => {
+      const activeTask = prevTasks.find(t => t.id === activeTaskId);
+      if (!activeTask) return prevTasks;
+
+      let updatedTasks = [...prevTasks];
+
+      // Case 1: Dropped on a droppable area (empty space in status column)
+      if (overStatus && !overTaskId) {
+        // Remove task from current position
+        updatedTasks = updatedTasks.filter(t => t.id !== activeTaskId);
+        
+        // Find the last task in the target column
+        const targetColumnTasks = updatedTasks.filter(t => t.status === overStatus);
+        const lastTaskInColumn = targetColumnTasks[targetColumnTasks.length - 1];
+        
+        // Determine insertion index
+        let insertIndex: number;
+        if (lastTaskInColumn) {
+          insertIndex = updatedTasks.findIndex(t => t.id === lastTaskInColumn.id) + 1;
+        } else {
+          // Column is empty
+          if (overStatus === 'new') {
+            insertIndex = 0;
+          } else if (overStatus === 'in_progress') {
+            const lastNewTask = updatedTasks.filter(t => t.status === 'new').pop();
+            insertIndex = lastNewTask ? updatedTasks.findIndex(t => t.id === lastNewTask.id) + 1 : 0;
+          } else {
+            insertIndex = updatedTasks.length;
+          }
+        }
+
+        // Determine priority based on position
+        const newPriority = determinePriorityAtPosition(updatedTasks, insertIndex, overStatus);
+        
+        // Create task with new status and priority
+        const taskWithNewStatusAndPriority = { 
+          ...activeTask, 
+          status: overStatus,
+          priority: newPriority
+        };
+        
+        // Insert at calculated position
+        updatedTasks.splice(insertIndex, 0, taskWithNewStatusAndPriority);
+
+        // Adjust all priorities in the target column to maintain hierarchy
+        updatedTasks = adjustColumnPriorities(updatedTasks, overStatus);
+
+        if (activeTask.status !== overStatus) {
+          // Also adjust the source column if status changed
+          updatedTasks = adjustColumnPriorities(updatedTasks, activeTask.status);
+        }
+
+        toast({
+          title: "Task Updated",
+          description: `Moved to ${overStatus.replace('_', ' ')} with ${newPriority} priority 🎯`,
+        });
+
+        return updatedTasks;
+      }
+
+      // Case 2: Dropped on another task (exact positioning)
+      if (overTaskId) {
+        const overTask = prevTasks.find(t => t.id === overTaskId);
+        if (!overTask) return prevTasks;
+
+        const activeIndex = prevTasks.findIndex(t => t.id === activeTaskId);
+        const overIndex = prevTasks.findIndex(t => t.id === overTaskId);
+
+        // Remove the active task first
+        updatedTasks = prevTasks.filter(t => t.id !== activeTaskId);
+        
+        // Calculate the correct insertion index
+        let insertIndex = overIndex;
+        if (activeIndex < overIndex) {
+          insertIndex = overIndex - 1;
+        }
+
+        // Determine priority based on surrounding cards
+        const newPriority = determinePriorityAtPosition(updatedTasks, insertIndex, overTask.status);
+        
+        // Update status and priority to match the target position
+        const taskWithNewStatusAndPriority = { 
+          ...activeTask, 
+          status: overTask.status,
+          priority: newPriority
+        };
+        
+        // Insert at the exact position
+        updatedTasks.splice(insertIndex, 0, taskWithNewStatusAndPriority);
+
+        // Adjust all priorities in the target column to maintain hierarchy
+        updatedTasks = adjustColumnPriorities(updatedTasks, overTask.status);
+
+        if (activeTask.status !== overTask.status) {
+          // Also adjust the source column if status changed
+          updatedTasks = adjustColumnPriorities(updatedTasks, activeTask.status);
+          toast({
+            title: "Task Updated",
+            description: `Moved to ${overTask.status.replace('_', ' ')} with ${newPriority} priority 🎯`,
+          });
+        } else {
+          toast({
+            title: "Priority Updated",
+            description: `Priority changed to ${newPriority} 🔄`,
+          });
+        }
+      }
+
+      return updatedTasks;
+    });
+  };
 
   // filter state (only used on this page)
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
@@ -269,48 +593,15 @@ export function TaskPage() {
 
   const filteredNew = allTasks
     .filter((t) => t.status === "new")
-    .filter(matchesFilters)
-    .sort((a, b) => {
-      const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
-      const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
-      if (priorityDiff !== 0) return priorityDiff;
-      const dateA = new Date(a.dueDate).getTime();
-      const dateB = new Date(b.dueDate).getTime();
-      if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
-      if (isNaN(dateA)) return 1;
-      if (isNaN(dateB)) return -1;
-      return 0;
-    });
+    .filter(matchesFilters);
 
   const filteredInProgress = allTasks
     .filter((t) => t.status === "in_progress")
-    .filter(matchesFilters)
-    .sort((a, b) => {
-      const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
-      const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
-      if (priorityDiff !== 0) return priorityDiff;
-      const dateA = new Date(a.dueDate).getTime();
-      const dateB = new Date(b.dueDate).getTime();
-      if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
-      if (isNaN(dateA)) return 1;
-      if (isNaN(dateB)) return -1;
-      return 0;
-    });
+    .filter(matchesFilters);
 
   const filteredCompleted = allTasks
     .filter((t) => t.status === "completed")
-    .filter(matchesFilters)
-    .sort((a, b) => {
-      const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
-      const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
-      if (priorityDiff !== 0) return priorityDiff;
-      const dateA = new Date(a.dueDate).getTime();
-      const dateB = new Date(b.dueDate).getTime();
-      if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
-      if (isNaN(dateA)) return 1;
-      if (isNaN(dateB)) return -1;
-      return 0;
-    });
+    .filter(matchesFilters);
 
   const filteredAll = [
     ...filteredNew,
@@ -659,53 +950,68 @@ export function TaskPage() {
       {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
 
       {/* Kanban or List View */}
-      {view === "kanban" ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:divide-x md:divide-neutral-200/10">
-          {/* New Column */}
-          <div className="space-y-4 px-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold">
-                  {filteredNew.length}
-                </span>
-                New
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {paginatedFilteredNew.map((task) => (
-                <div key={task.id} className="space-y-2">
-                  <TaskCard
-                    title={task.title}
-                    description={task.description || ''}
-                    priority={task.priority}
-                    assignedTo={task.assignedTo}
-                    assignedBy={task.assignedBy}
-                    tags={task.tags}
-                    dueDate={task.dueDate}
-                    projectName={task.projectName}
-                    status={task.status}
-                    taskId={task.id}
-                    images={task.images || []}
-                  />
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        {view === "kanban" ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:divide-x md:divide-neutral-200/10">
+            {/* New Column */}
+            <div className="space-y-4 px-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold">
+                    {filteredNew.length}
+                  </span>
+                  New
+                </h2>
+              </div>
+              <DroppableColumn 
+                id="new" 
+                items={paginatedFilteredNew.map(t => `task-${t.id}`)}
+              >
+                <div className="space-y-3">
+                  {paginatedFilteredNew.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      title={task.title}
+                      description={task.description || ''}
+                      priority={task.priority}
+                      assignedTo={task.assignedTo}
+                      assignedBy={task.assignedBy}
+                      tags={task.tags}
+                      dueDate={task.dueDate}
+                      projectName={task.projectName}
+                      status={task.status}
+                      taskId={task.id}
+                      images={task.images || []}
+                      onAdvanceStatus={handleAdvanceStatus}
+                    />
+                  ))}
                 </div>
-              ))}
+              </DroppableColumn>
             </div>
-          </div>
 
-          {/* In Progress Column */}
-          <div className="space-y-4 px-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                  {filteredInProgress.length}
-                </span>
+            {/* In Progress Column */}
+            <div className="space-y-4 px-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+                    {filteredInProgress.length}
+                  </span>
                 In Progress
               </h2>
             </div>
-            <div className="space-y-3">
-              {paginatedFilteredInProgress.map((task) => (
-                <div key={task.id} className="space-y-2">
+            <DroppableColumn 
+              id="in_progress" 
+              items={paginatedFilteredInProgress.map(t => `task-${t.id}`)}
+            >
+              <div className="space-y-3">
+                {paginatedFilteredInProgress.map((task) => (
                   <TaskCard
+                    key={task.id}
                     title={task.title}
                     description={task.description || ''}
                     priority={task.priority}
@@ -717,10 +1023,11 @@ export function TaskPage() {
                     status={task.status}
                     taskId={task.id}
                     images={task.images || []}
+                    onAdvanceStatus={handleAdvanceStatus}
                   />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </DroppableColumn>
           </div>
 
           {/* Completed Column */}
@@ -733,10 +1040,14 @@ export function TaskPage() {
                 Completed
               </h2>
             </div>
-            <div className="space-y-3">
-              {paginatedFilteredCompleted.map((task) => (
-                <div key={task.id} className="space-y-2">
+            <DroppableColumn 
+              id="completed" 
+              items={paginatedFilteredCompleted.map(t => `task-${t.id}`)}
+            >
+              <div className="space-y-3">
+                {paginatedFilteredCompleted.map((task) => (
                   <TaskCard
+                    key={task.id}
                     title={task.title}
                     description={task.description || ''}
                     priority={task.priority}
@@ -748,10 +1059,11 @@ export function TaskPage() {
                     status={task.status}
                     taskId={task.id}
                     images={task.images || []}
+                    onAdvanceStatus={handleAdvanceStatus}
                   />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </DroppableColumn>
           </div>
         </div>
       ) : (
@@ -766,10 +1078,14 @@ export function TaskPage() {
                   {filteredNew.length}
                 </Badge>
               </div>
-              <div className="space-y-3">
-                {paginatedFilteredNew.map((task) => (
-                  <div key={task.id} className="space-y-2">
+              <DroppableColumn 
+                id="new" 
+                items={paginatedFilteredNew.map(t => `task-${t.id}`)}
+              >
+                <div className="space-y-3">
+                  {paginatedFilteredNew.map((task) => (
                     <TaskCard
+                      key={task.id}
                       variant="compact"
                       title={task.title}
                       description={task.description || ''}
@@ -782,10 +1098,11 @@ export function TaskPage() {
                       status={task.status}
                       taskId={task.id}
                       images={task.images || []}
+                      onAdvanceStatus={handleAdvanceStatus}
                     />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </DroppableColumn>
               {filteredNew.length > tasksPerStatusList && (
                 <Button
                   variant="ghost"
@@ -811,10 +1128,14 @@ export function TaskPage() {
                   {filteredInProgress.length}
                 </Badge>
               </div>
-              <div className="space-y-3">
-                {paginatedFilteredInProgress.map((task) => (
-                  <div key={task.id} className="space-y-2">
+              <DroppableColumn 
+                id="in_progress" 
+                items={paginatedFilteredInProgress.map(t => `task-${t.id}`)}
+              >
+                <div className="space-y-3">
+                  {paginatedFilteredInProgress.map((task) => (
                     <TaskCard
+                      key={task.id}
                       variant="compact"
                       title={task.title}
                       description={task.description || ''}
@@ -827,10 +1148,11 @@ export function TaskPage() {
                       status={task.status}
                       taskId={task.id}
                       images={task.images || []}
+                      onAdvanceStatus={handleAdvanceStatus}
                     />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </DroppableColumn>
               {filteredInProgress.length > tasksPerStatusList && (
                 <Button
                   variant="ghost"
@@ -856,10 +1178,14 @@ export function TaskPage() {
                   {filteredCompleted.length}
                 </Badge>
               </div>
-              <div className="space-y-3">
-                {paginatedFilteredCompleted.map((task) => (
-                  <div key={task.id} className="space-y-2">
+              <DroppableColumn 
+                id="completed" 
+                items={paginatedFilteredCompleted.map(t => `task-${t.id}`)}
+              >
+                <div className="space-y-3">
+                  {paginatedFilteredCompleted.map((task) => (
                     <TaskCard
+                      key={task.id}
                       variant="compact"
                       title={task.title}
                       description={task.description || ''}
@@ -872,10 +1198,11 @@ export function TaskPage() {
                       status={task.status}
                       taskId={task.id}
                       images={task.images || []}
+                      onAdvanceStatus={handleAdvanceStatus}
                     />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </DroppableColumn>
               {filteredCompleted.length > tasksPerStatusList && (
                 <Button
                   variant="ghost"
@@ -900,6 +1227,36 @@ export function TaskPage() {
           )}
         </div>
       )}
+      </DndContext>
+
+      <DragOverlay dropAnimation={null}>
+        {activeId ? (
+          <div className="opacity-80 rotate-3 scale-105 shadow-2xl">
+            {(() => {
+              const taskId = parseInt(activeId.split('-')[1]);
+              const task = allTasks.find(t => t.id === taskId);
+              if (!task) return null;
+              
+              return (
+                <TaskCard
+                  title={task.title}
+                  description={task.description || ''}
+                  priority={task.priority}
+                  assignedTo={task.assignedTo}
+                  assignedBy={task.assignedBy}
+                  tags={task.tags}
+                  dueDate={task.dueDate}
+                  projectName={task.projectName}
+                  status={task.status}
+                  taskId={task.id}
+                  images={task.images || []}
+                  variant={view === "list" ? "compact" : "default"}
+                />
+              );
+            })()}
+          </div>
+        ) : null}
+      </DragOverlay>
 
       {/* Bottom Pagination - Only show in Kanban view */}
       {view === "kanban" && (

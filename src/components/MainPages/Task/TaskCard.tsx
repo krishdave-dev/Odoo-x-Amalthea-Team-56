@@ -4,13 +4,17 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { 
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Calendar, FolderKanban } from "lucide-react";
+import { Calendar, FolderKanban, CheckCircle, GripVertical } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { canAdvanceStatus } from "@/utils/taskStatusFlow";
 
 // ClickUp-style priority configuration
 const priorityConfig = {
@@ -33,6 +37,8 @@ interface TaskCardProps {
   tags?: string[]; // Optional tags
   assignedBy?: string; // Optional "assigned by" field
   variant?: "default" | "compact"; // default for kanban, compact for list
+  onAdvanceStatus?: (taskId: number) => void; // Callback for advancing status
+  isDraggable?: boolean; // Whether the card can be dragged
 }
 
 // Helper function to format due date with relative time
@@ -104,29 +110,84 @@ export function TaskCard({
   tags = [],
   assignedBy,
   variant = "default",
+  onAdvanceStatus,
+  isDraggable = true,
 }: TaskCardProps) {
   const router = useRouter();
   const priorityStyle = priorityConfig[priority] || priorityConfig.low;
   const { formatted: formattedDate, relative: relativeDate, isOverdue } = formatDueDate(dueDate);
   
   const isCompact = variant === "compact";
+  const canAdvance = status ? canAdvanceStatus(status) : false;
 
-  const handleCardClick = () => {
+  // Drag and drop setup
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+  } = useSortable({ 
+    id: `task-${taskId}`,
+    disabled: !isDraggable,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on drag handle or checkmark
+    if ((e.target as HTMLElement).closest('[data-drag-handle]') || 
+        (e.target as HTMLElement).closest('[data-checkmark-button]')) {
+      return;
+    }
     if (taskId) {
       router.push(`/tasks/${taskId}`);
+    }
+  };
+
+  const handleCheckmarkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onAdvanceStatus && taskId && canAdvance) {
+      onAdvanceStatus(taskId);
     }
   };
 
   return (
     <TooltipProvider>
       <Card 
+        ref={setNodeRef}
+        style={style}
         onClick={handleCardClick}
-        className="shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 cursor-pointer group"
+        className={`shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 cursor-pointer group relative ${
+          isDragging ? 'shadow-2xl scale-105 ring-2 ring-blue-400 opacity-50' : ''
+        } ${
+          isOver ? 'ring-2 ring-green-400 bg-green-50/30 scale-102' : ''
+        }`}
       >
+        {/* Drag Handle - List View Only */}
+        {isCompact && isDraggable && (
+          <div
+            {...attributes}
+            {...listeners}
+            data-drag-handle
+            className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
+        )}
+
         {/* Top bar with title and priority badge */}
         <div className={`flex items-start justify-between gap-3 border-b border-gray-100 ${
-          isCompact ? 'px-3 py-2.5' : 'p-4 pb-3'
-        }`}>
+          isCompact ? 'px-3 py-2.5 pl-7' : 'p-4 pb-3'
+        }`}
+          {...(isDraggable && !isCompact ? { ...attributes, ...listeners } : {})}
+        >
           <h3 className={`text-sm font-semibold text-gray-900 flex-1 group-hover:text-blue-600 transition-colors ${
             isCompact ? 'line-clamp-1 leading-tight' : 'line-clamp-2 leading-snug'
           }`}>
@@ -263,6 +324,31 @@ export function TaskCard({
             </div>
           )}
         </CardContent>
+
+        {/* Checkmark Button - Bottom Right */}
+        {canAdvance && onAdvanceStatus && (
+          <div className="absolute bottom-2 right-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  data-checkmark-button
+                  onClick={handleCheckmarkClick}
+                  className="h-8 w-8 p-0 rounded-full bg-green-50 hover:bg-green-100 border-2 border-green-200 hover:border-green-400 transition-all hover:scale-110 shadow-sm hover:shadow-md group/check"
+                >
+                  <CheckCircle className="h-5 w-5 text-green-600 group-hover/check:text-green-700" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="bg-green-600 text-white border-green-700">
+                <p className="text-xs font-medium">
+                  {status === 'new' && 'Mark as In Progress'}
+                  {status === 'in_progress' && 'Mark as Completed'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
       </Card>
     </TooltipProvider>
   );
