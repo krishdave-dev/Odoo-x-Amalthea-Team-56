@@ -38,26 +38,26 @@ export function StatsCards({ data, className }: StatsCardsProps) {
     {
       label: "Active Projects",
       value: formatNumber(data.activeProjects),
-      icon: <Briefcase className="h-5 w-5 text-blue-600" />,
-      accent: "bg-blue-50 border-blue-100",
+      icon: <Briefcase className="h-5 w-5 text-[#1A3D63]" />,
+      accent: "bg-[#E8F2FA] border-[#B3CFE5]",
     },
     {
       label: "Delayed Tasks",
       value: formatNumber(data.delayedTasks),
-      icon: <AlertTriangle className="h-5 w-5 text-amber-600" />,
-      accent: "bg-amber-50 border-amber-100",
+      icon: <AlertTriangle className="h-5 w-5 text-[#4A7FA7]" />,
+      accent: "bg-[#E8F2FA] border-[#B3CFE5]",
     },
     {
       label: "Hours Logged",
       value: formatNumber(data.hoursLogged),
-      icon: <Clock className="h-5 w-5 text-emerald-600" />,
-      accent: "bg-emerald-50 border-emerald-100",
+      icon: <Clock className="h-5 w-5 text-[#1A3D63]" />,
+      accent: "bg-[#E8F2FA] border-[#B3CFE5]",
     },
     {
       label: "Revenue Earned",
       value: formatCurrency(data.revenueEarned),
-      icon: <DollarSign className="h-5 w-5 text-indigo-600" />,
-      accent: "bg-indigo-50 border-indigo-100",
+      icon: <DollarSign className="h-5 w-5 text-[#4A7FA7]" />,
+      accent: "bg-[#E8F2FA] border-[#B3CFE5]",
     },
   ];
 
@@ -79,10 +79,10 @@ export function StatsCards({ data, className }: StatsCardsProps) {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">{item.label}</p>
-                <p className="mt-2 text-2xl font-semibold">{item.value}</p>
+                <p className="text-sm text-[#4A7FA7]">{item.label}</p>
+                <p className="mt-2 text-2xl font-semibold text-[#0A1931]">{item.value}</p>
               </div>
-              <div className="rounded-md bg-white/70 p-2 ring-1 ring-black/5">
+              <div className="rounded-md bg-white p-2 ring-1 ring-[#B3CFE5]">
                 {item.icon}
               </div>
             </div>

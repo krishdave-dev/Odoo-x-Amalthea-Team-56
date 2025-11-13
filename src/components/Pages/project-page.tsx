@@ -57,16 +57,6 @@ interface Project {
   images?: string[]; // Array of attachment URLs
 }
 
-interface PaginatedResponse {
-  data: Project[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
 export function ProjectPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -283,12 +273,12 @@ export function ProjectPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">Projects</h1>
+            <p className="mt-2 text-[#4A7FA7]">
               Manage and track all your projects in one place
             </p>
           </div>
-          <Button asChild>
+          <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">
             <Link href="/createproject">
               <Plus className="h-4 w-4" />
               New Project
@@ -316,8 +306,8 @@ export function ProjectPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">Projects</h1>
+          <p className="mt-2 text-[#4A7FA7]">
             {user.role === "member" 
               ? "View and track projects you are assigned to"
               : "Manage and track all your projects in one place"
@@ -326,7 +316,7 @@ export function ProjectPage() {
         </div>
         {/* Only show New Project button for admin, manager, and finance */}
         {user.role !== "member" && (
-          <Button asChild>
+          <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">
             <Link href="/createproject">
               <Plus className="h-4 w-4" />
               New Project
@@ -342,7 +332,7 @@ export function ProjectPage() {
       <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {/* View Toggle */}
-          <div className="flex items-center gap-1 rounded-lg border p-1">
+          <div className="flex items-center gap-1 rounded-lg border border-[#B3CFE5] p-1 bg-white">
             <Button
               variant={view === "kanban" ? "secondary" : "ghost"}
               size="sm"
@@ -363,9 +353,9 @@ export function ProjectPage() {
 
           {/* Status Filter */}
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Filter className="h-4 w-4 text-[#4A7FA7]" />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px] h-9">
+              <SelectTrigger className="w-40 h-9 border-[#B3CFE5] bg-white">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -385,9 +375,9 @@ export function ProjectPage() {
 
       {/* Projects Grid/List */}
       {projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground mb-4">No projects found</p>
-          <Button asChild>
+        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg border-[#B3CFE5] bg-[#F6FAFD]">
+          <p className="mb-4 text-[#4A7FA7]">No projects found</p>
+          <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">
             <Link href="/createproject">
               <Plus className="h-4 w-4" />
               Create your first project

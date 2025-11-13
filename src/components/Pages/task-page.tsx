@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { TaskCard } from "@/components/MainPages/Task/TaskCard";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,18 +17,15 @@ import {
   List,
   ChevronLeft,
   ChevronRight,
-  MoreVertical,
-  Flag,
   Pencil,
 } from "lucide-react";
 import { StatsCards } from "@/components/MainPages/Stats/StatsCards";
 import {
-  TaskActionDialog,
   TaskModel,
-  TaskStatus,
 } from "@/components/MainPages/Task/TaskActionDialog";
 import { MemberTaskActions } from "@/components/MainPages/Task/MemberTaskActions";
 import { ViewTimesheetsButton } from "@/components/MainPages/Task/ViewTimesheetsButton";
+
 // Fetch tasks from backend API
 
 export function TaskPage() {
@@ -69,7 +65,7 @@ export function TaskPage() {
             organizationId: user.organizationId 
           });
         }
-      } catch (_) {
+      } catch {
         // ignore
       }
     };
@@ -81,7 +77,6 @@ export function TaskPage() {
 
   const fetchTasks = useCallback(async () => {
     if (!currentUser) return; // Wait for user to load
-    
     try {
       setLoading(true);
       setError(null);
@@ -94,23 +89,18 @@ export function TaskPage() {
       }
       const json = await res.json();
       const data = (json?.data ?? []) as TaskModel[];
-      
       // Sort tasks by deadline (earliest first) - this creates priority
       const sortedData = data.sort((a, b) => {
         const dateA = new Date(a.dueDate).getTime();
         const dateB = new Date(b.dueDate).getTime();
-        
-        // If dates are invalid, put them at the end
         if (isNaN(dateA)) return 1;
         if (isNaN(dateB)) return -1;
-        
         return dateA - dateB; // Earliest deadline = highest priority
       });
-      
-      console.log(sortedData);
       setTasksState(sortedData);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load tasks");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to load tasks";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -139,18 +129,15 @@ export function TaskPage() {
         }
       } catch (error) {
         console.error("Error fetching KPIs:", error);
-        // Silently fail - KPIs are not critical
       }
     };
 
     fetchKPIs();
   }, [currentUser?.organizationId]);
 
-  // Backend now handles role-based filtering, so we use all tasks
   const allTasks = tasksState;
   const totalPages = Math.ceil(allTasks.length / itemsPerPage);
 
-  // computed filter counts for the Filter popover
   const filterCounts = useMemo(() => {
     const assignees = new Set(allTasks.map((t) => t.assignedTo)).size;
     const priorities = allTasks.reduce<Record<string, number>>((acc, t) => {
@@ -207,7 +194,7 @@ export function TaskPage() {
     return isNaN(parsed) ? null : new Date(parsed);
   };
 
-  const matchesFilters = (task: any) => {
+  const matchesFilters = (task: TaskModel) => {
     if (
       selectedAssignees.length &&
       !selectedAssignees.includes(task.assignedTo)
@@ -249,83 +236,52 @@ export function TaskPage() {
     .filter((t) => t.status === "new")
     .filter(matchesFilters)
     .sort((a, b) => {
-      // Sort by priority first (urgent=4, high=3, medium=2, low=1)
       const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
       const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
       if (priorityDiff !== 0) return priorityDiff;
-      
-      // Then by deadline (earliest first)
       const dateA = new Date(a.dueDate).getTime();
       const dateB = new Date(b.dueDate).getTime();
       if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
       if (isNaN(dateA)) return 1;
       if (isNaN(dateB)) return -1;
-      
       return 0;
     });
-    
+
   const filteredInProgress = allTasks
     .filter((t) => t.status === "in_progress")
     .filter(matchesFilters)
     .sort((a, b) => {
-      // Sort by priority first (urgent=4, high=3, medium=2, low=1)
       const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
       const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
       if (priorityDiff !== 0) return priorityDiff;
-      
-      // Then by deadline (earliest first)
       const dateA = new Date(a.dueDate).getTime();
       const dateB = new Date(b.dueDate).getTime();
       if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
       if (isNaN(dateA)) return 1;
       if (isNaN(dateB)) return -1;
-      
       return 0;
     });
-    
+
   const filteredCompleted = allTasks
     .filter((t) => t.status === "completed")
     .filter(matchesFilters)
     .sort((a, b) => {
-      // Sort by priority first (urgent=4, high=3, medium=2, low=1)
       const priorityMap: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
       const priorityDiff = (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
       if (priorityDiff !== 0) return priorityDiff;
-      
-      // Then by deadline (earliest first)
       const dateA = new Date(a.dueDate).getTime();
       const dateB = new Date(b.dueDate).getTime();
       if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
       if (isNaN(dateA)) return 1;
       if (isNaN(dateB)) return -1;
-      
       return 0;
     });
-    
+
   const filteredAll = [
     ...filteredNew,
     ...filteredInProgress,
     ...filteredCompleted,
   ];
-  
-  const handleTaskUpdate = (updated: TaskModel) => {
-    setTasksState((prev) =>
-      prev.map((t) => (t.id === updated.id ? updated : t))
-    );
-  };
-
-  const role: "team" | "manager" | "admin" | string =
-    currentUser?.role ?? "team";
-
-  // Check if current user can edit tasks (managers and admins only)
-  const canEditTasks = currentUser?.role === "admin" || currentUser?.role === "manager";
-
-  // Navigate to edit task page
-  const handleEditTask = (taskId: number) => {
-    router.push(`/edittask?id=${taskId}`);
-  };
-
-  // Use ProjectCard from MainPages for task cards/list so visuals match project cards
 
   const PaginationControls = () => (
     <div className="flex items-center justify-center gap-2">
@@ -367,8 +323,8 @@ export function TaskPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">Tasks</h1>
+          <p className="mt-2 text-[#4A7FA7]">
             {currentUser?.role === 'manager' 
               ? 'View and manage all tasks across the projects you manage'
               : currentUser?.role === 'member'
@@ -380,7 +336,7 @@ export function TaskPage() {
         <div className="flex items-center gap-3">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="border-[#B3CFE5]">
                 Filters
                 {(selectedAssignees.length > 0 || selectedPriorities.length > 0 || selectedProjects.length > 0 || deadlineFilter !== "all") && (
                   <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center">
@@ -507,7 +463,7 @@ export function TaskPage() {
           </Popover>
 
           {currentUser && currentUser.role !== "member" && (
-            <Button asChild>
+            <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">
               <Link href="/createtask">
                 <Plus className="h-4 w-4" />
                 New Task
@@ -522,7 +478,7 @@ export function TaskPage() {
 
       {/* View Toggle and Pagination */}
       <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-1 rounded-lg border p-1">
+        <div className="flex items-center gap-1 rounded-lg border border-[#B3CFE5] p-1 bg-white">
           <Button
             variant={view === "kanban" ? "secondary" : "ghost"}
             size="sm"
@@ -582,11 +538,12 @@ export function TaskPage() {
                       taskTitle={task.title}
                       hoursLogged={task.hoursLogged || 0}
                     />
-                    {canEditTasks ? (
+                    {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEditTask(task.id)}
+                        onClick={() => router.push(`/edittask?id=${task.id}`)}
+                        className="border-[#B3CFE5]"
                       >
                         <Pencil className="h-4 w-4 mr-1" />
                         Edit
@@ -634,11 +591,12 @@ export function TaskPage() {
                       taskTitle={task.title}
                       hoursLogged={task.hoursLogged || 0}
                     />
-                    {canEditTasks ? (
+                    {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEditTask(task.id)}
+                        onClick={() => router.push(`/edittask?id=${task.id}`)}
+                        className="border-[#B3CFE5]"
                       >
                         <Pencil className="h-4 w-4 mr-1" />
                         Edit
@@ -686,11 +644,12 @@ export function TaskPage() {
                       taskTitle={task.title}
                       hoursLogged={task.hoursLogged || 0}
                     />
-                    {canEditTasks ? (
+                    {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEditTask(task.id)}
+                        onClick={() => router.push(`/edittask?id=${task.id}`)}
+                        className="border-[#B3CFE5]"
                       >
                         <Pencil className="h-4 w-4 mr-1" />
                         Edit
@@ -740,11 +699,12 @@ export function TaskPage() {
                         taskTitle={task.title}
                         hoursLogged={task.hoursLogged || 0}
                       />
-                      {canEditTasks ? (
+                      {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditTask(task.id)}
+                          onClick={() => router.push(`/edittask?id=${task.id}`)}
+                          className="border-[#B3CFE5]"
                         >
                           <Pencil className="h-4 w-4 mr-1" />
                           Edit
@@ -792,11 +752,12 @@ export function TaskPage() {
                         taskTitle={task.title}
                         hoursLogged={task.hoursLogged || 0}
                       />
-                      {canEditTasks ? (
+                      {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditTask(task.id)}
+                          onClick={() => router.push(`/edittask?id=${task.id}`)}
+                          className="border-[#B3CFE5]"
                         >
                           <Pencil className="h-4 w-4 mr-1" />
                           Edit
@@ -844,11 +805,12 @@ export function TaskPage() {
                         taskTitle={task.title}
                         hoursLogged={task.hoursLogged || 0}
                       />
-                      {canEditTasks ? (
+                      {currentUser?.role === "admin" || currentUser?.role === "manager" ? (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditTask(task.id)}
+                          onClick={() => router.push(`/edittask?id=${task.id}`)}
+                          className="border-[#B3CFE5]"
                         >
                           <Pencil className="h-4 w-4 mr-1" />
                           Edit
