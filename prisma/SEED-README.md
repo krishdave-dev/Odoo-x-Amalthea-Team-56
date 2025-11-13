@@ -20,6 +20,20 @@ npm run db:seed-data
 
 **Current Configuration**: Creates data for User IDs: **13, 14, 15, 16**
 
+### 3. Demo Data (seed-demo.ts)
+Preserves existing users and organizations, and generates a rich demo dataset for every organization found. It only removes previously generated "[DEMO]" projects and their related data, then recreates them.
+
+```bash
+npm run db:seed-demo
+```
+
+What it does:
+- For each organization: creates 8 "[DEMO]" projects with realistic statuses and budgets
+- Adds members, 5 task lists, 20–40 tasks per project, and timesheets based on logged hours
+- Generates Sales Orders, Customer Invoices, Purchase Orders, Vendor Bills, and Expenses with varied statuses
+- Adds notifications, audit events, and a couple of pending invitations
+- Safe to re-run: it cleans only the previously created [DEMO] data per organization
+
 ## What Gets Created with Data-Only Seed
 
 For each organization containing the specified users:

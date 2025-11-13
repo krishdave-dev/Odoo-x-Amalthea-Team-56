@@ -1,7 +1,13 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FinanceManagement } from "@/components/finance/FinanceManagement";
 import { HourlyRateManager } from "@/components/settings/HourlyRateManager";
@@ -12,24 +18,31 @@ export function SettingsPage() {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'bg-purple-100 text-purple-800';
-      case 'manager':
-        return 'bg-blue-100 text-blue-800';
-      case 'finance':
-        return 'bg-green-100 text-green-800';
+      case "admin":
+        return "bg-secondary text-secondary-foreground";
+      case "manager":
+        return "bg-secondary text-secondary-foreground";
+      case "finance":
+        return "bg-secondary text-secondary-foreground";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-muted text-muted-foreground";
     }
   };
 
-  const canManageFinance = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'finance';
+  const canManageFinance =
+    user?.role === "admin" ||
+    user?.role === "manager" ||
+    user?.role === "finance";
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">Settings</h1>
-        <p className="mt-2 text-[#4A7FA7]">Manage your account, organization, and finance</p>
+        <h1 className="text-3xl font-bold tracking-tight text-[#0A1931]">
+          Settings
+        </h1>
+        <p className="mt-2 text-[#4A7FA7]">
+          Manage your account, organization, and finance
+        </p>
       </div>
 
       <div className="grid gap-6">
@@ -40,22 +53,28 @@ export function SettingsPage() {
               <User className="h-5 w-5" />
               User Profile
             </CardTitle>
-            <CardDescription className="text-[#4A7FA7]">Your account information</CardDescription>
+            <CardDescription className="text-[#4A7FA7]">
+              Your account information
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-[#4A7FA7] mb-1">Name</p>
-                <p className="font-medium text-[#0A1931]">{user?.name || 'N/A'}</p>
+                <p className="font-medium text-[#0A1931]">
+                  {user?.name || "N/A"}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-[#4A7FA7] mb-1">Email</p>
-                <p className="font-medium text-[#0A1931]">{user?.email || 'N/A'}</p>
+                <p className="font-medium text-[#0A1931]">
+                  {user?.email || "N/A"}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-[#4A7FA7] mb-1">Role</p>
-                <Badge className={getRoleBadgeColor(user?.role || 'member')}>
-                  {user?.role || 'member'}
+                <Badge className={getRoleBadgeColor(user?.role || "member")}>
+                  {user?.role || "member"}
                 </Badge>
               </div>
             </div>
@@ -69,12 +88,16 @@ export function SettingsPage() {
               <Building2 className="h-5 w-5" />
               Organization
             </CardTitle>
-            <CardDescription className="text-[#4A7FA7]">Your organization details</CardDescription>
+            <CardDescription className="text-[#4A7FA7]">
+              Your organization details
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div>
               <p className="text-sm text-[#4A7FA7] mb-1">Organization Name</p>
-              <p className="font-medium text-[#0A1931]">{user?.organizationName || 'N/A'}</p>
+              <p className="font-medium text-[#0A1931]">
+                {user?.organizationName || "N/A"}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -86,11 +109,13 @@ export function SettingsPage() {
               <Shield className="h-5 w-5" />
               Your Permissions
             </CardTitle>
-            <CardDescription className="text-[#4A7FA7]">What you can do based on your role</CardDescription>
+            <CardDescription className="text-[#4A7FA7]">
+              What you can do based on your role
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {user?.role === 'admin' && (
+              {user?.role === "admin" && (
                 <>
                   <div className="flex items-center gap-2 text-sm">
                     <div className="h-2 w-2 bg-green-500 rounded-full"></div>
@@ -118,7 +143,7 @@ export function SettingsPage() {
                   </div>
                 </>
               )}
-              {user?.role === 'manager' && (
+              {user?.role === "manager" && (
                 <>
                   <div className="flex items-center gap-2 text-sm">
                     <div className="h-2 w-2 bg-green-500 rounded-full"></div>
@@ -146,7 +171,7 @@ export function SettingsPage() {
                   </div>
                 </>
               )}
-              {user?.role === 'finance' && (
+              {user?.role === "finance" && (
                 <>
                   <div className="flex items-center gap-2 text-sm">
                     <div className="h-2 w-2 bg-green-500 rounded-full"></div>
@@ -174,7 +199,7 @@ export function SettingsPage() {
                   </div>
                 </>
               )}
-              {user?.role === 'member' && (
+              {user?.role === "member" && (
                 <>
                   <div className="flex items-center gap-2 text-sm">
                     <div className="h-2 w-2 bg-green-500 rounded-full"></div>
@@ -199,7 +224,7 @@ export function SettingsPage() {
         </Card>
 
         {/* Hourly Rates Management - Admin only */}
-        {user?.role === 'admin' && (
+        {user?.role === "admin" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-[#0A1931]">
@@ -207,7 +232,8 @@ export function SettingsPage() {
                 Employee Hourly Rates
               </CardTitle>
               <CardDescription className="text-[#4A7FA7]">
-                Configure hourly rates for automatic expense creation from logged hours
+                Configure hourly rates for automatic expense creation from
+                logged hours
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -225,7 +251,8 @@ export function SettingsPage() {
                 Finance Management
               </CardTitle>
               <CardDescription className="text-[#4A7FA7]">
-                Manage sales orders, purchase orders, invoices, bills, and expenses
+                Manage sales orders, purchase orders, invoices, bills, and
+                expenses
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -237,4 +264,3 @@ export function SettingsPage() {
     </div>
   );
 }
-

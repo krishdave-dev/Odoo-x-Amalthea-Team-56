@@ -132,7 +132,9 @@ export function AnalyticsPage() {
       }
 
       // Save the PDF
-      pdf.save(`analytics-report-${new Date().toISOString().split("T")[0]}.pdf`);
+      pdf.save(
+        `analytics-report-${new Date().toISOString().split("T")[0]}.pdf`
+      );
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("Failed to generate PDF. Please try again.");
@@ -201,7 +203,7 @@ export function AnalyticsPage() {
         <Button
           onClick={handleDownloadPDF}
           disabled={downloading}
-          className="gap-2 bg-[#4A255F] hover:bg-[#3b1f4e]"
+          className="gap-2 bg-primary hover:bg-primary/90"
         >
           <Download className="h-4 w-4" />
           {downloading ? "Generating PDF..." : "Download PDF"}
@@ -250,7 +252,7 @@ export function AnalyticsPage() {
               <CardTitle className="text-sm font-medium text-[#4A7FA7]">
                 Hours Logged
               </CardTitle>
-              <Clock className="h-4 w-4 text-purple-600" />
+              <Clock className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#0A1931]">
@@ -302,8 +304,12 @@ export function AnalyticsPage() {
           {/* Billable vs Non-billable Hours Pie Chart */}
           <Card data-chart="true">
             <CardHeader>
-              <CardTitle className="text-[#0A1931]">Billable vs Non-billable Hours</CardTitle>
-              <CardDescription className="text-[#4A7FA7]">Distribution of billable hours</CardDescription>
+              <CardTitle className="text-[#0A1931]">
+                Billable vs Non-billable Hours
+              </CardTitle>
+              <CardDescription className="text-[#4A7FA7]">
+                Distribution of billable hours
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -328,8 +334,12 @@ export function AnalyticsPage() {
           {/* Project Progress Chart */}
           <Card data-chart="true">
             <CardHeader>
-              <CardTitle className="text-[#0A1931]">Project Progress %</CardTitle>
-              <CardDescription className="text-[#4A7FA7]">Completion status by project</CardDescription>
+              <CardTitle className="text-[#0A1931]">
+                Project Progress %
+              </CardTitle>
+              <CardDescription className="text-[#4A7FA7]">
+                Completion status by project
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -368,8 +378,12 @@ export function AnalyticsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Card data-chart="true">
             <CardHeader>
-              <CardTitle className="text-[#0A1931]">Resource Utilization</CardTitle>
-              <CardDescription className="text-[#4A7FA7]">Team member utilization rates</CardDescription>
+              <CardTitle className="text-[#0A1931]">
+                Resource Utilization
+              </CardTitle>
+              <CardDescription className="text-[#4A7FA7]">
+                Team member utilization rates
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -407,7 +421,9 @@ export function AnalyticsPage() {
           {/* Project Cost vs Revenue */}
           <Card data-chart="true">
             <CardHeader>
-              <CardTitle className="text-[#0A1931]">Project Cost vs Revenue</CardTitle>
+              <CardTitle className="text-[#0A1931]">
+                Project Cost vs Revenue
+              </CardTitle>
               <CardDescription className="text-[#4A7FA7]">
                 Financial performance by project
               </CardDescription>

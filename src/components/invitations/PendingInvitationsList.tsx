@@ -1,104 +1,110 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { AlertCircle, Mail, Trash2, UserCheck, Clock } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle, Mail, Trash2, UserCheck, Clock } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface Invitation {
-  id: number
-  email: string
-  role: string
-  status: string
-  token: string
-  expiresAt: string
-  createdAt: string
+  id: number;
+  email: string;
+  role: string;
+  status: string;
+  token: string;
+  expiresAt: string;
+  createdAt: string;
   invitedBy: {
-    name: string
-    email: string
-  }
+    name: string;
+    email: string;
+  };
 }
 
 export function PendingInvitationsList() {
-  const [invitations, setInvitations] = useState<Invitation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const fetchInvitations = async () => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/invitations', {
-        credentials: 'include',
-      })
-      const data = await response.json()
+      setLoading(true);
+      const response = await fetch("/api/invitations", {
+        credentials: "include",
+      });
+      const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to fetch invitations')
+        throw new Error(data.error || "Failed to fetch invitations");
       }
 
-      setInvitations(data.data?.invitations || [])
+      setInvitations(data.data?.invitations || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load invitations')
+      setError(err.message || "Failed to load invitations");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchInvitations()
-  }, [])
+    fetchInvitations();
+  }, []);
 
   const handleRevoke = async (id: number) => {
-    if (!confirm('Are you sure you want to revoke this invitation?')) return
+    if (!confirm("Are you sure you want to revoke this invitation?")) return;
 
     try {
       const response = await fetch(`/api/invitations/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      const data = await response.json()
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to revoke invitation')
+        throw new Error(data.error || "Failed to revoke invitation");
       }
 
-      await fetchInvitations()
+      await fetchInvitations();
     } catch (err: any) {
-      alert(err.message || 'Failed to revoke invitation')
+      alert(err.message || "Failed to revoke invitation");
     }
-  }
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'bg-purple-100 text-purple-800'
-      case 'manager':
-        return 'bg-blue-100 text-blue-800'
-      case 'finance':
-        return 'bg-green-100 text-green-800'
+      case "admin":
+        return "bg-secondary text-secondary-foreground";
+      case "manager":
+        return "bg-secondary text-secondary-foreground";
+      case "finance":
+        return "bg-secondary text-secondary-foreground";
       default:
-        return 'bg-gray-100 text-gray-800'
+        return "bg-muted text-muted-foreground";
     }
-  }
+  };
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'accepted':
-        return 'bg-green-100 text-green-800'
-      case 'rejected':
-        return 'bg-red-100 text-red-800'
-      case 'expired':
-        return 'bg-gray-100 text-gray-800'
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "accepted":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      case "expired":
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-gray-100 text-gray-800'
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
-  const isExpired = (expiresAt: string) => new Date(expiresAt) < new Date()
+  const isExpired = (expiresAt: string) => new Date(expiresAt) < new Date();
 
   if (loading) {
     return (
@@ -107,7 +113,7 @@ export function PendingInvitationsList() {
           <p className="text-center text-gray-500">Loading invitations...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (error) {
@@ -120,10 +126,12 @@ export function PendingInvitationsList() {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  const pendingInvitations = invitations.filter((inv) => inv.status === 'pending')
+  const pendingInvitations = invitations.filter(
+    (inv) => inv.status === "pending"
+  );
 
   return (
     <Card>
@@ -162,14 +170,14 @@ export function PendingInvitationsList() {
                     )}
                   </div>
                   <p className="text-sm text-gray-600">
-                    Invited by {invitation.invitedBy.name} •{' '}
+                    Invited by {invitation.invitedBy.name} •{" "}
                     {formatDistanceToNow(new Date(invitation.createdAt), {
                       addSuffix: true,
                     })}
                   </p>
                   {!isExpired(invitation.expiresAt) && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Expires{' '}
+                      Expires{" "}
                       {formatDistanceToNow(new Date(invitation.expiresAt), {
                         addSuffix: true,
                       })}
@@ -190,5 +198,5 @@ export function PendingInvitationsList() {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

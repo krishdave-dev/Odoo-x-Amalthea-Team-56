@@ -1,124 +1,136 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { AlertCircle, Bell, Check, X, Mail, Building2 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle, Bell, Check, X, Mail, Building2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface Invitation {
-  id: number
-  email: string
-  role: string
-  expiresAt: string
-  createdAt: string
+  id: number;
+  email: string;
+  role: string;
+  expiresAt: string;
+  createdAt: string;
   organization: {
-    id: number
-    name: string
-  }
+    id: number;
+    name: string;
+  };
   invitedBy: {
-    id: number
-    name: string
-    email: string
-  }
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 export function InvitationNotifications() {
-  const [invitations, setInvitations] = useState<Invitation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [processing, setProcessing] = useState<number | null>(null)
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [processing, setProcessing] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchInvitations()
-  }, [])
+    fetchInvitations();
+  }, []);
 
   const fetchInvitations = async () => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/invitations/my-invitations', {
-        credentials: 'include',
-      })
-      const data = await response.json()
+      setLoading(true);
+      const response = await fetch("/api/invitations/my-invitations", {
+        credentials: "include",
+      });
+      const data = await response.json();
 
       if (response.ok && data.success) {
-        setInvitations(data.data.invitations || [])
+        setInvitations(data.data.invitations || []);
       } else {
-        setError(data.error || 'Failed to load invitations')
+        setError(data.error || "Failed to load invitations");
       }
     } catch (err: any) {
-      setError('Failed to load invitations')
-      console.error('Fetch invitations error:', err)
+      setError("Failed to load invitations");
+      console.error("Fetch invitations error:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleAccept = async (invitationId: number) => {
-    setProcessing(invitationId)
-    setError('')
+    setProcessing(invitationId);
+    setError("");
 
     try {
-      const response = await fetch(`/api/invitations/${invitationId}/accept-member`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-      const data = await response.json()
+      const response = await fetch(
+        `/api/invitations/${invitationId}/accept-member`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+      const data = await response.json();
 
       if (response.ok && data.success) {
         // Reload page to update user session with new organization
-        window.location.href = '/dashboard/member?message=invitation_accepted'
+        window.location.href = "/dashboard/member?message=invitation_accepted";
       } else {
-        setError(data.error || 'Failed to accept invitation')
-        setProcessing(null)
+        setError(data.error || "Failed to accept invitation");
+        setProcessing(null);
       }
     } catch (err: any) {
-      setError('Failed to accept invitation')
-      setProcessing(null)
-      console.error('Accept invitation error:', err)
+      setError("Failed to accept invitation");
+      setProcessing(null);
+      console.error("Accept invitation error:", err);
     }
-  }
+  };
 
   const handleReject = async (invitationId: number) => {
-    if (!confirm('Are you sure you want to decline this invitation?')) return
+    if (!confirm("Are you sure you want to decline this invitation?")) return;
 
-    setProcessing(invitationId)
-    setError('')
+    setProcessing(invitationId);
+    setError("");
 
     try {
-      const response = await fetch(`/api/invitations/${invitationId}/reject-member`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-      const data = await response.json()
+      const response = await fetch(
+        `/api/invitations/${invitationId}/reject-member`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+      const data = await response.json();
 
       if (response.ok && data.success) {
         // Remove from list
-        setInvitations(prev => prev.filter(inv => inv.id !== invitationId))
+        setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
       } else {
-        setError(data.error || 'Failed to reject invitation')
+        setError(data.error || "Failed to reject invitation");
       }
     } catch (err: any) {
-      setError('Failed to reject invitation')
-      console.error('Reject invitation error:', err)
+      setError("Failed to reject invitation");
+      console.error("Reject invitation error:", err);
     } finally {
-      setProcessing(null)
+      setProcessing(null);
     }
-  }
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'bg-purple-100 text-purple-800'
-      case 'manager':
-        return 'bg-blue-100 text-blue-800'
-      case 'finance':
-        return 'bg-green-100 text-green-800'
+      case "admin":
+        return "bg-secondary text-secondary-foreground";
+      case "manager":
+        return "bg-secondary text-secondary-foreground";
+      case "finance":
+        return "bg-secondary text-secondary-foreground";
       default:
-        return 'bg-gray-100 text-gray-800'
+        return "bg-muted text-muted-foreground";
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -127,11 +139,11 @@ export function InvitationNotifications() {
           <p className="text-center text-gray-500">Loading invitations...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (invitations.length === 0) {
-    return null // Don't show card if no invitations
+    return null; // Don't show card if no invitations
   }
 
   return (
@@ -142,7 +154,8 @@ export function InvitationNotifications() {
           Organization Invitations
         </CardTitle>
         <CardDescription className="text-blue-700">
-          You have {invitations.length} pending invitation{invitations.length !== 1 ? 's' : ''}
+          You have {invitations.length} pending invitation
+          {invitations.length !== 1 ? "s" : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -167,16 +180,24 @@ export function InvitationNotifications() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">{invitation.invitedBy.name}</span> has invited
-                  you to join as{' '}
+                  <span className="font-medium">
+                    {invitation.invitedBy.name}
+                  </span>{" "}
+                  has invited you to join as{" "}
                   <Badge className={getRoleBadgeColor(invitation.role)}>
                     {invitation.role}
                   </Badge>
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Invited {formatDistanceToNow(new Date(invitation.createdAt), { addSuffix: true })}
-                  {' • '}
-                  Expires {formatDistanceToNow(new Date(invitation.expiresAt), { addSuffix: true })}
+                  Invited{" "}
+                  {formatDistanceToNow(new Date(invitation.createdAt), {
+                    addSuffix: true,
+                  })}
+                  {" • "}
+                  Expires{" "}
+                  {formatDistanceToNow(new Date(invitation.expiresAt), {
+                    addSuffix: true,
+                  })}
                 </p>
               </div>
             </div>
@@ -189,7 +210,7 @@ export function InvitationNotifications() {
                 className="flex-1"
               >
                 {processing === invitation.id ? (
-                  'Accepting...'
+                  "Accepting..."
                 ) : (
                   <>
                     <Check className="h-4 w-4 mr-1" />
@@ -212,5 +233,5 @@ export function InvitationNotifications() {
         ))}
       </CardContent>
     </Card>
-  )
+  );
 }

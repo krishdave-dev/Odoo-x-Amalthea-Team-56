@@ -125,13 +125,13 @@ export function HourlyRateManager() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-purple-100 text-purple-800";
+        return "bg-secondary text-secondary-foreground";
       case "manager":
-        return "bg-blue-100 text-blue-800";
+        return "bg-secondary text-secondary-foreground";
       case "finance":
-        return "bg-green-100 text-green-800";
+        return "bg-secondary text-secondary-foreground";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -156,7 +156,10 @@ export function HourlyRateManager() {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to recalculate expenses",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to recalculate expenses",
         variant: "destructive",
       });
     } finally {
@@ -185,7 +188,9 @@ export function HourlyRateManager() {
           variant="outline"
           size="sm"
         >
-          <RefreshCw className={cn("mr-2 h-4 w-4", recalculating && "animate-spin")} />
+          <RefreshCw
+            className={cn("mr-2 h-4 w-4", recalculating && "animate-spin")}
+          />
           Recalculate All Expenses
         </Button>
       </div>
