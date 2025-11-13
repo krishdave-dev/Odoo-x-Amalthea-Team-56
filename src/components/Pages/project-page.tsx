@@ -28,6 +28,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Wand2,
+  PencilLine,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +78,7 @@ export function ProjectPage() {
     hoursLogged: 0,
     revenueEarned: 0,
   });
+  const [newProjectChoiceOpen, setNewProjectChoiceOpen] = useState(false);
   const itemsPerPage = 6;
 
   // Fetch projects from API
@@ -316,11 +319,12 @@ export function ProjectPage() {
         </div>
         {/* Only show New Project button for admin, manager, and finance */}
         {user.role !== "member" && (
-          <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">
-            <Link href="/createproject">
-              <Plus className="h-4 w-4" />
-              New Project
-            </Link>
+          <Button
+            className="bg-primary hover:bg-primary/90"
+            onClick={() => setNewProjectChoiceOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            New Project
           </Button>
         )}
       </div>
@@ -463,6 +467,49 @@ export function ProjectPage() {
               disabled={deleting}
             >
               {deleting ? "Deleting..." : "Delete Project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Project Choice Dialog */}
+      <Dialog open={newProjectChoiceOpen} onOpenChange={setNewProjectChoiceOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>How do you want to create your project?</DialogTitle>
+            <DialogDescription>
+              Choose between creating a project manually or letting AI draft a plan for you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              className="h-28 justify-start text-left flex-col items-start gap-2 border-2 hover:border-primary/40"
+              onClick={() => router.push("/createproject")}
+            >
+              <div className="flex items-center gap-2">
+                <PencilLine className="h-4 w-4 text-primary" />
+                <span className="text-base font-semibold text-foreground">Assign Custom Project</span>
+              </div>
+              {/* <span className="text-sm text-muted-foreground">Use the standard form to set up the project and tasks manually.</span> */}
+            </Button>
+
+            <Button
+              className="h-28 justify-start text-left flex-col items-start gap-2 bg-primary hover:bg-primary/90"
+              onClick={() => router.push("/createproject/ai")}
+            >
+              <div className="flex items-center gap-2">
+                <Wand2 className="h-4 w-4" />
+                <span className="text-base font-semibold text-primary-foreground">Assign Project with AI</span>
+              </div>
+              {/* <span className="text-sm text-primary-foreground/80">Describe your project; we’ll generate a draft plan and suggested assignments.</span> */}
+            </Button>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewProjectChoiceOpen(false)}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
