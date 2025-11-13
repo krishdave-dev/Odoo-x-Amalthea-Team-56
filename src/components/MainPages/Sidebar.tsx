@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,10 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Bell,
 } from "lucide-react";
 
-const navItems = [
+const baseNavItems = [
   { name: "Projects", href: "/project", icon: FolderKanban },
   { name: "Tasks", href: "/task", icon: CheckSquare },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
@@ -26,6 +27,42 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Build nav items; notifications only for members (or all non-admin roles?)
+  // Only show notifications for member role currently (adjust roles as needed)
+  const showNotifications = user?.role === "member";
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    async function fetchUnread() {
+      if (!user?.id || !showNotifications) return;
+      try {
+        const res = await fetch(
+          `/api/notifications/unread-count?userId=${user.id}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success) {
+          setUnreadCount(data.data.count ?? data.data ?? 0);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    fetchUnread();
+    interval = setInterval(fetchUnread, 60000); // refresh every minute
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [user?.id, showNotifications]);
+
+  const navItems = showNotifications
+    ? [
+        ...baseNavItems,
+        { name: "Notifications", href: "/notifications", icon: Bell },
+      ]
+    : baseNavItems;
 
   return (
     <aside
@@ -99,6 +136,7 @@ export function Sidebar() {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
+          const isNotifications = item.name === "Notifications";
           return (
             <Link
               key={item.href}
@@ -113,7 +151,22 @@ export function Sidebar() {
               }
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span className="truncate">{item.name}</span>}
+              {!collapsed && (
+                <span className="truncate flex items-center gap-2">
+                  {item.name}
+                  {isNotifications && unreadCount > 0 && (
+                    <span className="inline-flex items-center justify-center rounded-full bg-red-500 text-[10px] font-medium px-1.5 py-0.5 leading-none text-white">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </span>
+              )}
+              {collapsed && isNotifications && unreadCount > 0 && (
+                <span
+                  className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500"
+                  aria-hidden="true"
+                />
+              )}
             </Link>
           );
         })}
