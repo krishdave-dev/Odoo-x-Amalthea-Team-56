@@ -123,6 +123,12 @@ export class UserService {
         createdAt: true,
         updatedAt: true,
         // Exclude passwordHash
+        organization: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         projectMembers: {
           include: {
             project: {

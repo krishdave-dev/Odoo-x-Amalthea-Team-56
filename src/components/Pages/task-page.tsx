@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskCard } from "@/components/MainPages/Task/TaskCard";
+import { TaskCalendar } from "@/components/MainPages/Task/TaskCalendar";
+import { Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -53,10 +55,17 @@ import { DroppableColumn } from "@/components/MainPages/Task/DroppableColumn";
 export function TaskPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [view, setView] = useState<"kanban" | "list">("kanban");
+  const [view, setView] = useState<"kanban" | "list" | "calendar">("kanban");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
+
+  const handleCalendarMonthChange = useCallback((year: number, month: number) => {
+    setCalendarYear(year);
+    setCalendarMonth(month);
+  }, []);
 
   const [tasksState, setTasksState] = useState<TaskModel[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -903,12 +912,6 @@ export function TaskPage() {
             </PopoverContent>
           </Popover>
 
-          <Button variant="outline" size="sm" asChild className="border-[#B3CFE5]">
-            <Link href="/map">
-              <Network className="h-4 w-4 mr-2" />
-              Dependency Map
-            </Link>
-          </Button>
 
           {currentUser && currentUser.role !== "member" && (
             <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">
@@ -947,6 +950,14 @@ export function TaskPage() {
             <List className="h-4 w-4" />
             List
           </Button>
+          <Button
+            variant={view === "calendar" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setView("calendar")}
+          >
+            <Calendar className="h-4 w-4" />
+            Calendar
+          </Button>
         </div>
         {view === "kanban" && <PaginationControls />}
       </div>
@@ -957,7 +968,21 @@ export function TaskPage() {
       )}
       {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
 
-      {/* Kanban or List View */}
+      {/* View Content */}
+      {view === "calendar" && (
+        <TaskCalendar
+          tasks={allTasks.map(t => ({
+            id: t.id,
+            title: t.title,
+            dueDate: t.dueDate,
+            status: t.status,
+            priority: t.priority,
+          }))}
+          year={calendarYear}
+          month={calendarMonth}
+          onMonthChange={handleCalendarMonthChange}
+        />
+      )}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -976,8 +1001,8 @@ export function TaskPage() {
                   New
                 </h2>
               </div>
-              <DroppableColumn 
-                id="new" 
+              <DroppableColumn
+                id="new"
                 items={paginatedFilteredNew.map(t => `task-${t.id}`)}
               >
                 <div className="space-y-3">
@@ -1012,8 +1037,8 @@ export function TaskPage() {
                 In Progress
               </h2>
             </div>
-            <DroppableColumn 
-              id="in_progress" 
+            <DroppableColumn
+              id="in_progress"
               items={paginatedFilteredInProgress.map(t => `task-${t.id}`)}
             >
               <div className="space-y-3">
@@ -1048,8 +1073,8 @@ export function TaskPage() {
                 Completed
               </h2>
             </div>
-            <DroppableColumn 
-              id="completed" 
+            <DroppableColumn
+              id="completed"
               items={paginatedFilteredCompleted.map(t => `task-${t.id}`)}
             >
               <div className="space-y-3">
@@ -1074,167 +1099,167 @@ export function TaskPage() {
             </DroppableColumn>
           </div>
         </div>
-      ) : (
-        // List View - Grouped by Status
-        <div className="space-y-8">
-          {/* New Tasks Section */}
-          {paginatedFilteredNew.length > 0 && (
-            <div>
-              <div className="mb-4 flex items-center gap-2 border-b pb-2">
-                <h3 className="text-xl font-semibold">New</h3>
-                <Badge variant="secondary" className="rounded-full">
-                  {filteredNew.length}
-                </Badge>
-              </div>
-              <DroppableColumn 
-                id="new" 
-                items={paginatedFilteredNew.map(t => `task-${t.id}`)}
-              >
-                <div className="space-y-3">
-                  {paginatedFilteredNew.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      variant="compact"
-                      title={task.title}
-                      description={task.description || ''}
-                      priority={task.priority}
-                      assignedTo={task.assignedTo}
-                      assignedBy={task.assignedBy}
-                      tags={task.tags}
-                      dueDate={task.dueDate}
-                      projectName={task.projectName}
-                      status={task.status}
-                      taskId={task.id}
-                      images={task.images || []}
-                      onAdvanceStatus={handleAdvanceStatus}
-                    />
-                  ))}
+        ) : view === "list" ? (
+          // List View - Grouped by Status
+          <div className="space-y-8">
+            {/* New Tasks Section */}
+            {paginatedFilteredNew.length > 0 && (
+              <div>
+                <div className="mb-4 flex items-center gap-2 border-b pb-2">
+                  <h3 className="text-xl font-semibold">New</h3>
+                  <Badge variant="secondary" className="rounded-full">
+                    {filteredNew.length}
+                  </Badge>
                 </div>
-              </DroppableColumn>
-              {filteredNew.length > tasksPerStatusList && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleStatusExpanded('new')}
-                  className="w-full mt-3 text-sm"
+                <DroppableColumn
+                  id="new"
+                  items={paginatedFilteredNew.map(t => `task-${t.id}`)}
                 >
-                  {expandedStatuses.new 
-                    ? `Show Less` 
-                    : `View More (${filteredNew.length - tasksPerStatusList} more)`
-                  }
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* In Progress Tasks Section */}
-          {paginatedFilteredInProgress.length > 0 && (
-            <div>
-              <div className="mb-4 flex items-center gap-2 border-b pb-2">
-                <h3 className="text-xl font-semibold">In Progress</h3>
-                <Badge variant="secondary" className="rounded-full bg-blue-100 text-blue-700">
-                  {filteredInProgress.length}
-                </Badge>
+                  <div className="space-y-3">
+                    {paginatedFilteredNew.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        variant="compact"
+                        title={task.title}
+                        description={task.description || ''}
+                        priority={task.priority}
+                        assignedTo={task.assignedTo}
+                        assignedBy={task.assignedBy}
+                        tags={task.tags}
+                        dueDate={task.dueDate}
+                        projectName={task.projectName}
+                        status={task.status}
+                        taskId={task.id}
+                        images={task.images || []}
+                        onAdvanceStatus={handleAdvanceStatus}
+                      />
+                    ))}
+                  </div>
+                </DroppableColumn>
+                {filteredNew.length > tasksPerStatusList && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleStatusExpanded('new')}
+                    className="w-full mt-3 text-sm"
+                  >
+                    {expandedStatuses.new
+                      ? `Show Less`
+                      : `View More (${filteredNew.length - tasksPerStatusList} more)`
+                    }
+                  </Button>
+                )}
               </div>
-              <DroppableColumn 
-                id="in_progress" 
-                items={paginatedFilteredInProgress.map(t => `task-${t.id}`)}
-              >
-                <div className="space-y-3">
-                  {paginatedFilteredInProgress.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      variant="compact"
-                      title={task.title}
-                      description={task.description || ''}
-                      priority={task.priority}
-                      assignedTo={task.assignedTo}
-                      assignedBy={task.assignedBy}
-                      tags={task.tags}
-                      dueDate={task.dueDate}
-                      projectName={task.projectName}
-                      status={task.status}
-                      taskId={task.id}
-                      images={task.images || []}
-                      onAdvanceStatus={handleAdvanceStatus}
-                    />
-                  ))}
-                </div>
-              </DroppableColumn>
-              {filteredInProgress.length > tasksPerStatusList && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleStatusExpanded('in_progress')}
-                  className="w-full mt-3 text-sm"
-                >
-                  {expandedStatuses.in_progress 
-                    ? `Show Less` 
-                    : `View More (${filteredInProgress.length - tasksPerStatusList} more)`
-                  }
-                </Button>
-              )}
-            </div>
-          )}
+            )}
 
-          {/* Completed Tasks Section */}
-          {paginatedFilteredCompleted.length > 0 && (
-            <div>
-              <div className="mb-4 flex items-center gap-2 border-b pb-2">
-                <h3 className="text-xl font-semibold">Completed</h3>
-                <Badge variant="secondary" className="rounded-full">
-                  {filteredCompleted.length}
-                </Badge>
+            {/* In Progress Tasks Section */}
+            {paginatedFilteredInProgress.length > 0 && (
+              <div>
+                <div className="mb-4 flex items-center gap-2 border-b pb-2">
+                  <h3 className="text-xl font-semibold">In Progress</h3>
+                  <Badge variant="secondary" className="rounded-full bg-blue-100 text-blue-700">
+                    {filteredInProgress.length}
+                  </Badge>
+                </div>
+                <DroppableColumn
+                  id="in_progress"
+                  items={paginatedFilteredInProgress.map(t => `task-${t.id}`)}
+                >
+                  <div className="space-y-3">
+                    {paginatedFilteredInProgress.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        variant="compact"
+                        title={task.title}
+                        description={task.description || ''}
+                        priority={task.priority}
+                        assignedTo={task.assignedTo}
+                        assignedBy={task.assignedBy}
+                        tags={task.tags}
+                        dueDate={task.dueDate}
+                        projectName={task.projectName}
+                        status={task.status}
+                        taskId={task.id}
+                        images={task.images || []}
+                        onAdvanceStatus={handleAdvanceStatus}
+                      />
+                    ))}
+                  </div>
+                </DroppableColumn>
+                {filteredInProgress.length > tasksPerStatusList && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleStatusExpanded('in_progress')}
+                    className="w-full mt-3 text-sm"
+                  >
+                    {expandedStatuses.in_progress
+                      ? `Show Less`
+                      : `View More (${filteredInProgress.length - tasksPerStatusList} more)`
+                    }
+                  </Button>
+                )}
               </div>
-              <DroppableColumn 
-                id="completed" 
-                items={paginatedFilteredCompleted.map(t => `task-${t.id}`)}
-              >
-                <div className="space-y-3">
-                  {paginatedFilteredCompleted.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      variant="compact"
-                      title={task.title}
-                      description={task.description || ''}
-                      priority={task.priority}
-                      assignedTo={task.assignedTo}
-                      assignedBy={task.assignedBy}
-                      tags={task.tags}
-                      dueDate={task.dueDate}
-                      projectName={task.projectName}
-                      status={task.status}
-                      taskId={task.id}
-                      images={task.images || []}
-                      onAdvanceStatus={handleAdvanceStatus}
-                    />
-                  ))}
-                </div>
-              </DroppableColumn>
-              {filteredCompleted.length > tasksPerStatusList && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleStatusExpanded('completed')}
-                  className="w-full mt-3 text-sm"
-                >
-                  {expandedStatuses.completed 
-                    ? `Show Less` 
-                    : `View More (${filteredCompleted.length - tasksPerStatusList} more)`
-                  }
-                </Button>
-              )}
-            </div>
-          )}
+            )}
 
-          {/* No tasks message */}
-          {filteredAll.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              No tasks found matching the filters
-            </div>
-          )}
-        </div>
-      )}
+            {/* Completed Tasks Section */}
+            {paginatedFilteredCompleted.length > 0 && (
+              <div>
+                <div className="mb-4 flex items-center gap-2 border-b pb-2">
+                  <h3 className="text-xl font-semibold">Completed</h3>
+                  <Badge variant="secondary" className="rounded-full">
+                    {filteredCompleted.length}
+                  </Badge>
+                </div>
+                <DroppableColumn
+                  id="completed"
+                  items={paginatedFilteredCompleted.map(t => `task-${t.id}`)}
+                >
+                  <div className="space-y-3">
+                    {paginatedFilteredCompleted.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        variant="compact"
+                        title={task.title}
+                        description={task.description || ''}
+                        priority={task.priority}
+                        assignedTo={task.assignedTo}
+                        assignedBy={task.assignedBy}
+                        tags={task.tags}
+                        dueDate={task.dueDate}
+                        projectName={task.projectName}
+                        status={task.status}
+                        taskId={task.id}
+                        images={task.images || []}
+                        onAdvanceStatus={handleAdvanceStatus}
+                      />
+                    ))}
+                  </div>
+                </DroppableColumn>
+                {filteredCompleted.length > tasksPerStatusList && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleStatusExpanded('completed')}
+                    className="w-full mt-3 text-sm"
+                  >
+                    {expandedStatuses.completed
+                      ? `Show Less`
+                      : `View More (${filteredCompleted.length - tasksPerStatusList} more)`
+                    }
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* No tasks message */}
+            {filteredAll.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                No tasks found matching the filters
+              </div>
+            )}
+          </div>
+        ) : null}
       </DndContext>
 
       <DragOverlay dropAnimation={null}>
