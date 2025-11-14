@@ -235,6 +235,12 @@ export class ProjectService {
             },
           },
         },
+        _count: {
+          select: {
+            tasks: true,
+            members: true,
+          },
+        },
       },
     })
   }

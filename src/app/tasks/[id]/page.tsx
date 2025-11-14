@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { TaskDetailSidebar } from "@/components/MainPages/Task/TaskDetailSidebar";
+import { SubtasksChecklist } from "@/components/MainPages/Task/SubtasksChecklist";
 
 // Priority configuration
 const priorityConfig = {
@@ -391,6 +392,10 @@ export default function TaskDetailPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Subtasks / Checklist */}
+                <SubtasksChecklist />
+
 
                 {/* Metadata */}
                 <div className="pt-4 border-t border-gray-100 flex items-center gap-6 text-xs text-gray-500">

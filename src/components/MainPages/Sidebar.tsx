@@ -14,11 +14,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
+  Network,
 } from "lucide-react";
 
 const baseNavItems = [
   { name: "Projects", href: "/project", icon: FolderKanban },
   { name: "Tasks", href: "/task", icon: CheckSquare },
+  { name: "Dependency Map", href: "/map", icon: Network },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: SettingsIcon },
 ];
