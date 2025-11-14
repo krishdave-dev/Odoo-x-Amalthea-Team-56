@@ -405,13 +405,19 @@ export function ProjectPage() {
       {/* Projects Grid/List */}
       {projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg border-[#B3CFE5] bg-[#F6FAFD]">
-          <p className="mb-4 text-[#4A7FA7]">No projects found</p>
-          <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">
-            <Link href="/createproject">
-              <Plus className="h-4 w-4" />
-              Create your first project
-            </Link>
-          </Button>
+          <p className="mb-4 text-[#4A7FA7]">
+            {user.role === "member" 
+              ? "You are not assigned to any projects yet"
+              : "No projects found"}
+          </p>
+          {user.role !== "member" && (
+            <Button asChild className="bg-[#4A255F] hover:bg-[#3b1f4e]">
+              <Link href="/createproject">
+                <Plus className="h-4 w-4" />
+                Create your first project
+              </Link>
+            </Button>
+          )}
         </div>
       ) : view === "kanban" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
